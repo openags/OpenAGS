@@ -21,12 +21,20 @@ As the project matures and the capabilities of our agents evolve, we plan to int
 
 ## Directory Structure
 
-Todo
-
+- `gscientist/`: The main directory housing all the components of Nova.
+  - `core/`: System management.
+  - `agents/`: Contains the agent implementations with `agent.py` serving as a template or a particular instance.
+  - `llm/`: Dedicated to language model functionality, where `llm.py` defines language model-related operations.
+  - `tools/`: A suite of utility scripts to augment the functionality of agents.
+    - `builtins/`: Essential tools that come with the Nova framework.
+    - `plugins/`: Dynamically loaded modules that extend the capabilities of Nova agents.
+- `ui/`: User interface assets that define how users interact with the Nova framework.
+  - `frontend/`: Web ui.
+  - `qt/`:  The graphical user interface components built with PyQt or PySide6 for user interaction.
 
 ## Getting Started
 
-Todo: Instructions on how to set up the Nova environment, install dependencies, and run the initial configuration.
+Todo: Instructions on how to set up the environment, install dependencies, and run the initial configuration.
 
 ## Contribution
 
