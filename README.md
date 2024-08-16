@@ -24,6 +24,7 @@ As the project matures and the capabilities of our agents evolve, we plan to int
 - `gscientist/`: The main directory housing all the components of Nova.
   - `core/`: System management.
   - `agents/`: Contains the agent implementations with `agent.py` serving as a template or a particular instance.
+  - `communication/`: Contains the ros like communication mechanism.  
   - `llm/`: Dedicated to language model functionality, where `llm.py` defines language model-related operations.
   - `tools/`: A suite of utility scripts to augment the functionality of agents.
     - `builtins/`: Essential tools that come with the Nova framework.
