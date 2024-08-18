@@ -1,6 +1,5 @@
 # Auto-Research
-Towards fully automatic research agents framework
-
+Autonomous Generalist Scientist: Towards and Beyond Human-level Automatic Research Using Foundation Model-Based AI Agents and Robots
 
 ## Overview
 
@@ -13,7 +12,7 @@ Phase 2: Integration of Robotics
 As the project matures and the capabilities of our agents evolve, we plan to introduce robotics to carry out physical tasks and experiments in the laboratory. 
 
 <p align="center">
-  <img src="docs/images/framework1.png" alt="Framework and Vision">
+  <img src="docs/images/framework4.png" alt="Framework and Vision">
   <br>
   <em>Auto Research Agents framework and vision</em>
 </p>
@@ -54,10 +53,9 @@ To make a contribution or suggest an idea to this project.
 ```
 bibtex
 @misc{auto-research,
-  title        = {Auto Research: Towards fully automatic research agents},
-  author       = {Pengsong Zhang, Welcome Coauthors},
+  title        = {Autonomous Generalist Scientist: Towards and Beyond Human-level Automatic Research Using Foundation Model-Based AI Agents and Robots (A Position)},
+  author       = {Starkson Zhang, Alfredo Pearson, Zhenting Wang, Welcome Coauthors},
   year         = {2024},
-  howpublished = {GitHub},
-  url          = {https://github.com/universea/Auto-Research}
+  journal      = {DOI: 10.13140/RG.2.2.35148.01923},
 }
 ```
