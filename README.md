@@ -3,7 +3,7 @@ Autonomous Generalist Scientist: Towards and Beyond Human-level Automatic Resear
 
 ## Overview
 
-The Auto-Research project aims to revolutionize the academic research process by introducing a framework for fully automated research agents. This initiative seeks to integrate artificial intelligence into every stage of research—from literature reviews to proposal, experiment, writing and submitting manuscripts. Our vision is to facilitate a seamless research workflow that enhances productivity and fosters innovation in scientific inquiry. Here’s how we envision the integration of automated agents and robotics evolving within the framework:
+The Autonomous Generalist Scientist （AI Scientist） project aims to revolutionize the academic research process by introducing a framework for fully automated research agents/robots. This initiative seeks to integrate artificial intelligence into every stage of research—from literature reviews to proposal, experiment, writing, submitting, reviewing manuscripts. Our vision is to facilitate a seamless research workflow that enhances productivity and fosters innovation in scientific inquiry. Here’s how we envision the integration of automated agents and robotics evolving within the framework:
 
 Phase 1: Software-Only Agents
 Initially, the project will focus on software-only agents that can perform tasks not requiring physical interaction with the real world. 
