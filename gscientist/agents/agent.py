@@ -1,5 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional
 
 class Agent(ABC):
     def __init__(self, name, role, communication_manager):
@@ -53,3 +54,4 @@ class Agent(ABC):
 
     def setup_communicator(self, communicator):
         self.communication_manager = communicator
+
