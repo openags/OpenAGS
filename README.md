@@ -5,6 +5,12 @@ The accelerating pace of scientific research highlights the need for more effici
 To address these challenges, it is crucial to develop automatic systems that can dynamically interact with both physical and virtual environments while facilitating the integration of knowledge across multiple disciplines. 
 Foundation AI models, such as large language models, are trained on vast amount of data from diverse sources, enabling them to acquire knowledge across various scientific disciplines. Therefore, it is promising to build the generalist AI robot scientist for autonomous research based on these foundation models and robot technologies.
 
+<p align="center">
+  <img src="docs/images/framework4.png" alt="Framework and Vision">
+  <br>
+  <em>Auto Research Agents framework and vision</em>
+</p>
+
 ## Overview
 
 The Autonomous Generalist Scientist （AI Scientist） project aims to revolutionize the academic research process by introducing a framework for fully automated research agents/robots. This initiative seeks to integrate artificial intelligence into every stage of research—from literature reviews to proposal, experiment, writing, submitting, reviewing manuscripts. Our vision is to facilitate a seamless research workflow that enhances productivity and fosters innovation in scientific inquiry. Here’s how we envision the integration of automated agents and robotics evolving within the framework:
@@ -16,11 +22,10 @@ Phase 2: Integration of Robotics
 As the project matures and the capabilities of our agents evolve, we plan to introduce robotics to carry out physical tasks and experiments in the laboratory. 
 
 <p align="center">
-  <img src="docs/images/framework4.png" alt="Framework and Vision">
+  <img src="docs/images/future_timeline.jpg" alt="Futrue timeline">
   <br>
-  <em>Auto Research Agents framework and vision</em>
+  <em>Auto Research Timeline</em>
 </p>
-
 
 ## Directory Structure
 
