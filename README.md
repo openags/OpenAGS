@@ -6,6 +6,12 @@ To address these challenges, it is crucial to develop automatic systems that can
 Foundation AI models, such as large language models, are trained on vast amount of data from diverse sources, enabling them to acquire knowledge across various scientific disciplines. Therefore, it is promising to build the generalist AI robot scientist for autonomous research based on these foundation models and robot technologies.
 
 <p align="center">
+  <img src="docs/images/ui.png" alt="UI">
+  <br>
+  <em>UI</em>
+</p>
+
+<p align="center">
   <img src="docs/images/framework4.png" alt="Framework and Vision">
   <br>
   <em>Auto Research Agents framework and vision</em>
