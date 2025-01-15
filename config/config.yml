@@ -1,0 +1,17 @@
+agents:
+
+  GSAgent:
+    model: "deepseek-chat"
+    api_type: "deepseek"
+    api_key: "sk-161232a17dfd47c3b4a895a3da6278fc"
+    base_url: "https://api.deepseek.com"
+    price: [0.00014, 0.00028]
+    stream: True
+
+  AnotherAgent:
+    model: "gpt-4"
+    api_type: "openai"
+    api_key: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    base_url: "https://api.openai.com"
+    price: [0.0002, 0.0004]
+    stream: false

@@ -1,11 +1,42 @@
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QFrame, 
-                            QLabel, QTextBrowser, QSizePolicy)
-from PySide6.QtCore import Qt
+                            QLabel, QTextBrowser, QSizePolicy, QApplication)
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QPixmap
 import re
 import os
-from autogen import ConversableAgent
+import sys
 from chat_ui import Ui_Form
+import yaml
+
+# 将项目根目录添加到 PYTHONPATH
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from gscientist.agents.gs_agent import GSAgent
+
+
+
+class AIThread(QThread):
+    """处理AI回复的线程"""
+    reply_ready = Signal(str)  # 用于发送AI回复的信号
+    error_occurred = Signal(str)  # 用于发送错误信息的信号
+
+    def __init__(self, agent, message):
+        super().__init__()
+        self.agent = agent
+        self.message = message
+
+    def run(self):
+        try:
+            reply = self.agent.generate_reply(
+                messages=[{"content": self.message, "role": "user"}]
+            )
+            if reply:
+                self.reply_ready.emit(reply)
+        except Exception as e:
+            print(f"Error generating reply: {str(e)}")
+            self.error_occurred.emit("抱歉，出现了一些问题，请稍后再试。")
 
 class ChatWidget(QWidget):
     def __init__(self, parent=None):
@@ -14,22 +45,19 @@ class ChatWidget(QWidget):
         self.ui.setupUi(self)
         
         # 初始化 AutoGen agent
-        self.agent = ConversableAgent(
-            "chatbot",
-            llm_config={   
-                "model": "deepseek-chat",
-                "api_type": "deepseek",
-                "api_key": "sk-161232a17dfd47c3b4a895a3da6278fc",
-                "base_url": "https://api.deepseek.com",
-                "price": [0.00014, 0.00028]
-            },
-            code_execution_config=False,
-            human_input_mode="NEVER"  # 不请求人类输入
-        )
+        config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "config.yml")
+        with open(config_path, 'r', encoding='utf-8') as file:
+            config = yaml.safe_load(file)
+        
+        llm_config = config['agents'].get("GSAgent")
+        self.agent = GSAgent("GSAgent", llm_config) 
         
         # 连接信号
         self.ui.sendButton.clicked.connect(self.on_send_clicked)
         self.ui.messageInput.textChanged.connect(self.adjust_input_height)
+        
+        # 初始化AI线程
+        self.ai_thread = None
         
     def format_text(self, text, is_user=True):
         """格式化文本，处理代码块、链接等"""
@@ -92,22 +120,23 @@ class ChatWidget(QWidget):
         bubble = QFrame()
         bubble_layout = QHBoxLayout(bubble)
         bubble_layout.setContentsMargins(10, 5, 10, 5)
-        bubble.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        bubble.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # 改为 Minimum
         
         # 使用 QTextBrowser
         message = QTextBrowser()
         message.setOpenExternalLinks(True)
         message.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         message.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # 改为 Minimum
         
         # 设置富文本内容
         formatted_text = self.format_text(text, is_user)
         message.setHtml(formatted_text)
         
-        # 调整大小
+        # 调整文本浏览器大小
         message.document().adjustSize()
-        message.setMinimumHeight(int(message.document().size().height()))
+        content_height = message.document().size().height()
+        message.setFixedHeight(content_height + 10)  # 添加一些边距
         
         # 设置样式
         bubble.setStyleSheet(f"""
@@ -144,7 +173,7 @@ class ChatWidget(QWidget):
         self.ui.scrollArea.verticalScrollBar().setValue(
             self.ui.scrollArea.verticalScrollBar().maximum()
         )
-    
+
     def on_send_clicked(self):
         """发送按钮点击事件"""
         text = self.ui.messageInput.toPlainText().strip()
@@ -156,23 +185,30 @@ class ChatWidget(QWidget):
             # 禁用发送按钮
             self.ui.sendButton.setEnabled(False)
             
-            try:
-                # 使用 generate_reply 获取回复
-                reply = self.agent.generate_reply(
-                    messages=[{"content": text, "role": "user"}]
-                )
-                
-                # 显示助手回复
-                if reply:
-                    self.add_message(reply, False)
-            except Exception as e:
-                print(f"Error generating reply: {str(e)}")
-            finally:
-                # 重新启用发送按钮
-                self.ui.sendButton.setEnabled(True)
+            # 创建并启动AI回复线程
+            self.ai_thread = AIThread(self.agent, text)
+            self.ai_thread.reply_ready.connect(self.handle_ai_reply)
+            self.ai_thread.error_occurred.connect(self.handle_error)
+            self.ai_thread.finished.connect(lambda: self.ui.sendButton.setEnabled(True))
+            self.ai_thread.start()
+
+    def handle_ai_reply(self, reply):
+        """处理AI回复"""
+        self.add_message(reply, False)
+
+    def handle_error(self, error_message):
+        """处理错误"""
+        self.add_message(error_message, False)
     
     def adjust_input_height(self):
         """调整输入框高度"""
         doc_height = self.ui.messageInput.document().size().height()
         new_height = min(max(50, doc_height + 10), 200)
         self.ui.messageInput.setFixedHeight(int(new_height))
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    widget = ChatWidget()
+    widget.show()
+    sys.exit(app.exec())
