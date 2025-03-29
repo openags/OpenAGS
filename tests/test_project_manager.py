@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 from gscientist.project_manager import ProjectManager
 
+
 def run_tests():
     print("Running ProjectManager tests...\n")
     
