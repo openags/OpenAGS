@@ -7,8 +7,9 @@ import os
 import sys
 from chat_ui import Ui_Form
 import yaml
+from camel.messages import BaseMessage
 
-# å°†é¡¹ç›®æ ¹ç›®å½•æ·»åŠ åˆ° PYTHONPATH
+# ½«ÏîÄ¿¸ùÄ¿Â¼Ìí¼Óµ½ PYTHONPATH
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
@@ -18,9 +19,9 @@ from gscientist.agents.gs_agent import GSAgent
 
 
 class AIThread(QThread):
-    """å¤„ç†AIå›å¤çš„çº¿ç¨‹"""
-    reply_ready = Signal(str)  # ç”¨äºå‘é€AIå›å¤çš„ä¿¡å·
-    error_occurred = Signal(str)  # ç”¨äºå‘é€é”™è¯¯ä¿¡æ¯çš„ä¿¡å·
+    """´¦ÀíAI»Ø¸´µÄÏß³Ì"""
+    reply_ready = Signal(str)  # ÓÃÓÚ·¢ËÍAI»Ø¸´µÄĞÅºÅ
+    error_occurred = Signal(str)  # ÓÃÓÚ·¢ËÍ´íÎóĞÅÏ¢µÄĞÅºÅ
 
     def __init__(self, agent, message):
         super().__init__()
@@ -29,14 +30,21 @@ class AIThread(QThread):
 
     def run(self):
         try:
-            reply = self.agent.generate_reply(
-                messages=[{"content": self.message, "role": "user"}]
+            # Create proper message format for GSAgent
+            user_msg = BaseMessage.make_user_message(
+                role_name="User",
+                content=self.message
             )
-            if reply:
-                self.reply_ready.emit(reply)
+            
+            # Get response from agent
+            response = self.agent.step(user_msg)
+            if response and response.msgs:
+                self.reply_ready.emit(response.msgs[0].content)
+            else:
+                self.error_occurred.emit("Î´ÊÕµ½ÓĞĞ§»Ø¸´£¬ÇëÖØÊÔ¡£")
         except Exception as e:
             print(f"Error generating reply: {str(e)}")
-            self.error_occurred.emit("æŠ±æ­‰ï¼Œå‡ºç°äº†ä¸€äº›é—®é¢˜ï¼Œè¯·ç¨åå†è¯•ã€‚")
+            self.error_occurred.emit(f"±§Ç¸£¬³öÏÖÁËÒ»Ğ©ÎÊÌâ: {str(e)}")
 
 class ChatWidget(QWidget):
     def __init__(self, parent=None):
@@ -44,7 +52,7 @@ class ChatWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         
-        # åˆå§‹åŒ– AutoGen agent
+        # ³õÊ¼»¯ AutoGen agent
         config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "config.yml")
         with open(config_path, 'r', encoding='utf-8') as file:
             config = yaml.safe_load(file)
@@ -52,42 +60,42 @@ class ChatWidget(QWidget):
         llm_config = config['agents'].get("GSAgent")
         self.agent = GSAgent("GSAgent", llm_config) 
         
-        # è¿æ¥ä¿¡å·
+        # Á¬½ÓĞÅºÅ
         self.ui.sendButton.clicked.connect(self.on_send_clicked)
         self.ui.messageInput.textChanged.connect(self.adjust_input_height)
         
-        # åˆå§‹åŒ–AIçº¿ç¨‹
+        # ³õÊ¼»¯AIÏß³Ì
         self.ai_thread = None
         
     def format_text(self, text, is_user=True):
-        """æ ¼å¼åŒ–æ–‡æœ¬ï¼Œå¤„ç†ä»£ç å—ã€é“¾æ¥ç­‰"""
+        """¸ñÊ½»¯ÎÄ±¾£¬´¦Àí´úÂë¿é¡¢Á´½ÓµÈ"""
         formatted_text = text
         
-        # å¤„ç†ä»£ç å— (è¢«```åŒ…å›´çš„å†…å®¹)
+        # ´¦Àí´úÂë¿é (±»```°üÎ§µÄÄÚÈİ)
         code_pattern = r"```(.*?)```"
         formatted_text = re.sub(code_pattern, self._format_code_block, formatted_text, flags=re.DOTALL)
         
-        # å¤„ç†é“¾æ¥
+        # ´¦ÀíÁ´½Ó
         url_pattern = r'https?://\S+'
         formatted_text = re.sub(url_pattern, 
             lambda m: f'<a href="{m.group()}" style="color: {"white" if is_user else "blue"}">{m.group()}</a>', 
             formatted_text)
         
-        # å¤„ç†ç²—ä½“ **text**
+        # ´¦Àí´ÖÌå **text**
         bold_pattern = r'\*\*(.*?)\*\*'
         formatted_text = re.sub(bold_pattern, r'<b>\1</b>', formatted_text)
         
-        # å¤„ç†æ–œä½“ *text*
+        # ´¦ÀíĞ±Ìå *text*
         italic_pattern = r'\*(.*?)\*'
         formatted_text = re.sub(italic_pattern, r'<i>\1</i>', formatted_text)
         
-        # å¤„ç†æ¢è¡Œ
+        # ´¦Àí»»ĞĞ
         formatted_text = formatted_text.replace('\n', '<br>')
         
         return formatted_text
     
     def _format_code_block(self, match):
-        """æ ¼å¼åŒ–ä»£ç å—"""
+        """¸ñÊ½»¯´úÂë¿é"""
         code = match.group(1).strip()
         return f"""
             <pre style='
@@ -102,12 +110,12 @@ class ChatWidget(QWidget):
         """
     
     def add_message(self, text, is_user=True):
-        """æ·»åŠ ä¸€æ¡æ¶ˆæ¯"""
+        """Ìí¼ÓÒ»ÌõÏûÏ¢"""
         message_widget = QWidget()
         layout = QHBoxLayout(message_widget)
         layout.setContentsMargins(10, 5, 10, 5)
         
-        # åˆ›å»ºå¤´åƒ
+        # ´´½¨Í·Ïñ
         avatar = QLabel()
         avatar.setFixedSize(40, 40)
         avatar_path = os.path.join("resources", "user_avatar.png" if is_user else "ai_avatar.png")
@@ -116,29 +124,29 @@ class ChatWidget(QWidget):
             print(f"Warning: Could not load avatar image from {avatar_path}")
         avatar.setPixmap(pixmap.scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         
-        # åˆ›å»ºæ°”æ³¡
+        # ´´½¨ÆøÅİ
         bubble = QFrame()
         bubble_layout = QHBoxLayout(bubble)
         bubble_layout.setContentsMargins(10, 5, 10, 5)
-        bubble.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # æ”¹ä¸º Minimum
+        bubble.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # ¸ÄÎª Minimum
         
-        # ä½¿ç”¨ QTextBrowser
+        # Ê¹ÓÃ QTextBrowser
         message = QTextBrowser()
         message.setOpenExternalLinks(True)
         message.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         message.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # æ”¹ä¸º Minimum
+        message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # ¸ÄÎª Minimum
         
-        # è®¾ç½®å¯Œæ–‡æœ¬å†…å®¹
+        # ÉèÖÃ¸»ÎÄ±¾ÄÚÈİ
         formatted_text = self.format_text(text, is_user)
         message.setHtml(formatted_text)
         
-        # è°ƒæ•´æ–‡æœ¬æµè§ˆå™¨å¤§å°
+        # µ÷ÕûÎÄ±¾ä¯ÀÀÆ÷´óĞ¡
         message.document().adjustSize()
         content_height = message.document().size().height()
-        message.setFixedHeight(content_height + 10)  # æ·»åŠ ä¸€äº›è¾¹è·
+        message.setFixedHeight(content_height + 10)  # Ìí¼ÓÒ»Ğ©±ß¾à
         
-        # è®¾ç½®æ ·å¼
+        # ÉèÖÃÑùÊ½
         bubble.setStyleSheet(f"""
             QFrame {{
                 background-color: {'#007AFF' if is_user else '#E9E9EB'};
@@ -153,7 +161,7 @@ class ChatWidget(QWidget):
             }}
         """)
         
-        # å¸ƒå±€æ’åˆ—
+        # ²¼¾ÖÅÅÁĞ
         if is_user:
             bubble_layout.addWidget(message)
             layout.addWidget(bubble)
@@ -163,29 +171,29 @@ class ChatWidget(QWidget):
             layout.addWidget(bubble)
             bubble_layout.addWidget(message)
         
-        # æ·»åŠ åˆ°æ¶ˆæ¯åˆ—è¡¨
+        # Ìí¼Óµ½ÏûÏ¢ÁĞ±í
         self.ui.messageLayout.insertWidget(
             self.ui.messageLayout.count() - 1,
             message_widget
         )
         
-        # æ»šåŠ¨åˆ°åº•éƒ¨
+        # ¹ö¶¯µ½µ×²¿
         self.ui.scrollArea.verticalScrollBar().setValue(
             self.ui.scrollArea.verticalScrollBar().maximum()
         )
 
     def on_send_clicked(self):
-        """å‘é€æŒ‰é’®ç‚¹å‡»äº‹ä»¶"""
+        """·¢ËÍ°´Å¥µã»÷ÊÂ¼ş"""
         text = self.ui.messageInput.toPlainText().strip()
         if text:
-            # æ˜¾ç¤ºç”¨æˆ·æ¶ˆæ¯
+            # ÏÔÊ¾ÓÃ»§ÏûÏ¢
             self.add_message(text, True)
             self.ui.messageInput.clear()
             
-            # ç¦ç”¨å‘é€æŒ‰é’®
+            # ½ûÓÃ·¢ËÍ°´Å¥
             self.ui.sendButton.setEnabled(False)
             
-            # åˆ›å»ºå¹¶å¯åŠ¨AIå›å¤çº¿ç¨‹
+            # ´´½¨²¢Æô¶¯AI»Ø¸´Ïß³Ì
             self.ai_thread = AIThread(self.agent, text)
             self.ai_thread.reply_ready.connect(self.handle_ai_reply)
             self.ai_thread.error_occurred.connect(self.handle_error)
@@ -193,15 +201,15 @@ class ChatWidget(QWidget):
             self.ai_thread.start()
 
     def handle_ai_reply(self, reply):
-        """å¤„ç†AIå›å¤"""
+        """´¦ÀíAI»Ø¸´"""
         self.add_message(reply, False)
 
     def handle_error(self, error_message):
-        """å¤„ç†é”™è¯¯"""
+        """´¦Àí´íÎó"""
         self.add_message(error_message, False)
     
     def adjust_input_height(self):
-        """è°ƒæ•´è¾“å…¥æ¡†é«˜åº¦"""
+        """µ÷ÕûÊäÈë¿ò¸ß¶È"""
         doc_height = self.ui.messageInput.document().size().height()
         new_height = min(max(50, doc_height + 10), 200)
         self.ui.messageInput.setFixedHeight(int(new_height))
