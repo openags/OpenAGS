@@ -1,17 +1,9 @@
 agents:
 
   GSAgent:
-    model: "deepseek-chat"
-    api_type: "deepseek"
-    api_key: "sk-161232a17dfd47c3b4a895a3da6278fc"
-    base_url: "https://api.deepseek.com"
-    price: [0.00014, 0.00028]
-    stream: True
-
-  AnotherAgent:
-    model: "gpt-4"
-    api_type: "openai"
-    api_key: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    base_url: "https://api.openai.com"
-    price: [0.0002, 0.0004]
-    stream: false
+    model_platform: "deepseek"
+    model_type: "deepseek-chat"
+    api_key: "sk-5d5bcc8fe6cc46a69645ec4e2a705ca4"
+    url: "https://api.deepseek.com"
+    model_config_dict:  # Additional model configuration
+      temperature: 0.7
