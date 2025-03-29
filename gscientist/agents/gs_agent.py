@@ -6,7 +6,7 @@ from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
 
 class GSAgent(ChatAgent):
-    def __init__(self, name='GSAgent', llm_config=None):
+    def __init__(self, name='GSAgent', llm_config=None, tools=None):
         """Initialize a GSAgent instance.
 
         Args:
@@ -46,6 +46,7 @@ class GSAgent(ChatAgent):
         super().__init__(
             system_message=sys_msg,
             model=model,
+            tools=tools,
             message_window_size=10  # Maintain conversation history window
         )
         

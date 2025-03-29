@@ -14,6 +14,8 @@ import requests
 import feedparser
 import pandas as pd
 
+from camel.toolkits.function_tool import FunctionTool
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -124,49 +126,71 @@ class ArxivSearcher:
               query: str,
               start_date: Optional[str] = None,
               end_date: Optional[str] = None,
-              categories: Optional[List[str]] = None) -> List[Paper]:
+              categories: Optional[List[str]] = None,
+              max_results: Optional[int] = None) -> List[Paper]:
+        r"""Search Arxiv papers with date segmentation strategy.
+
+        Args:
+            query (str): The search query string.
+            start_date (Optional[str]): Start date in 'YYYY-MM-DD' format.
+            end_date (Optional[str]): End date in 'YYYY-MM-DD' format.
+            categories (Optional[List[str]]): List of Arxiv categories to filter by.
+            max_results (Optional[int]): Maximum number of results to return. If None, 
+                uses the value set by set_max_results().
+
+        Returns:
+            List[Paper]: A list of Paper objects matching the search criteria,
+                sorted by publication date in descending order.
         """
-        Search Arxiv papers with date segmentation strategy
-        """
-        all_results = []
-        date_ranges = []
+        # Store original max_results
+        original_max_results = self.max_results
         
-        if start_date and end_date:
-            date_ranges = self._split_date_range(start_date, end_date)
-        else:
-            date_ranges = [(start_date, end_date)]
+        # Update max_results if provided
+        if max_results is not None:
+            self.max_results = max_results
             
-        for date_start, date_end in date_ranges:
-            try:
-                segment_results = self._search_segment(
-                    query=query,
-                    start_date=date_start,
-                    end_date=date_end,
-                    categories=categories
-                )
-                # Filter out None values
-                valid_results = [r for r in segment_results if r is not None]
-                all_results.extend(valid_results)
+        try:
+            all_results = []
+            date_ranges = []
+            
+            if start_date and end_date:
+                date_ranges = self._split_date_range(start_date, end_date)
+            else:
+                date_ranges = [(start_date, end_date)]
                 
-                if len(all_results) >= self.max_results:
-                    break
+            # Rest of the search implementation
+            for date_start, date_end in date_ranges:
+                try:
+                    segment_results = self._search_segment(
+                        query=query,
+                        start_date=date_start,
+                        end_date=date_end,
+                        categories=categories
+                    )
+                    valid_results = [r for r in segment_results if r is not None]
+                    all_results.extend(valid_results)
                     
-                # Add delay between segments
-                time.sleep(random.uniform(*self.delay))
-                
-            except Exception as e:
-                logging.error(f"Error searching segment {date_start} to {date_end}: {e}")
-                continue
-        
-        # Filter and sort results
-        valid_results = [r for r in all_results if r is not None and r.published_date is not None]
-        sorted_results = sorted(
-            valid_results,
-            key=lambda x: x.published_date,
-            reverse=True
-        )
-        
-        return sorted_results[:self.max_results]
+                    if len(all_results) >= self.max_results:
+                        break
+                        
+                    time.sleep(random.uniform(*self.delay))
+                    
+                except Exception as e:
+                    logging.error(f"Error searching segment {date_start} to {date_end}: {e}")
+                    continue
+            
+            valid_results = [r for r in all_results if r is not None and r.published_date is not None]
+            sorted_results = sorted(
+                valid_results,
+                key=lambda x: x.published_date,
+                reverse=True
+            )
+            
+            return sorted_results[:self.max_results]
+            
+        finally:
+            # Restore original max_results
+            self.max_results = original_max_results
 
     def _search_segment(self, 
                        query: str,
@@ -339,18 +363,17 @@ class ArxivSearcher:
         logging.info(f"Saved {len(papers)} papers to {filepath}")
 
     def download_pdf(self, paper_id: str, save_path: Union[str, Path]) -> Path:
-        """
-        Download PDF file for a given arxiv paper ID and save it to the specified directory
-        
+        r"""Download PDF file for a given arxiv paper ID and save it to the specified directory.
+
         Args:
-            paper_id (str): The arxiv paper ID (e.g., '2304.12244')
-            save_path (Union[str, Path]): Directory path where to save the PDF file
-            
+            paper_id (str): The arxiv paper ID (e.g., '2304.12244').
+            save_path (Union[str, Path]): Directory path where to save the PDF file.
+
         Returns:
-            Path: Path to the downloaded PDF file
-            
+            Path: Path to the downloaded PDF file.
+
         Raises:
-            Exception: If download fails after max retries
+            Exception: If download fails after max retries.
         """
         save_dir = Path(save_path)
         save_dir.mkdir(parents=True, exist_ok=True)
@@ -384,6 +407,19 @@ class ArxivSearcher:
                     raise Exception(f"Failed to download PDF for paper {paper_id} after {self.max_retries} attempts")
         
         raise Exception("Unexpected error in download_pdf")
+
+    def get_tools(self) -> List[FunctionTool]:
+        r"""Returns a list of FunctionTool objects representing the
+        functions in the toolkit.
+
+        Returns:
+            List[FunctionTool]: A list of FunctionTool objects
+                representing the functions in the toolkit.
+        """
+        return [
+            FunctionTool(self.search),
+            FunctionTool(self.download_pdf),
+        ]
 
 def main():
     # Setup logging for debugging

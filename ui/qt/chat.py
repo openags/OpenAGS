@@ -9,12 +9,9 @@ from chat_ui import Ui_Form
 import yaml
 from camel.messages import BaseMessage
 
-# Add project root directory to PYTHONPATH
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 from gscientist.agents.gs_agent import GSAgent
+from gscientist.tools.builtins.paper_search.arxiv import ArxivSearcher
 
 
 
@@ -56,9 +53,15 @@ class ChatWidget(QWidget):
         config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "config.yml")
         with open(config_path, 'r', encoding='utf-8') as file:
             config = yaml.safe_load(file)
-        
-        llm_config = config['agents'].get("GSAgent")
-        self.agent = GSAgent("GSAgent", llm_config) 
+        # Verity if the config file is loaded correctly
+        if config is None:
+            raise ValueError("Failed to load configuration file.")
+
+        # Initialize the ArxivSearcher tool
+        arxiv_searcher = ArxivSearcher()
+        arxiv_tools = arxiv_searcher.get_tools()
+
+        self.agent = GSAgent("GSAgent", config, tools=arxiv_tools) 
         
         # Connect signals
         self.ui.sendButton.clicked.connect(self.on_send_clicked)
@@ -128,14 +131,14 @@ class ChatWidget(QWidget):
         bubble = QFrame()
         bubble_layout = QHBoxLayout(bubble)
         bubble_layout.setContentsMargins(10, 5, 10, 5)
-        bubble.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # ¸ÄÎª Minimum
+        bubble.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # ï¿½ï¿½Îª Minimum
         
         # Use QTextBrowser
         message = QTextBrowser()
         message.setOpenExternalLinks(True)
         message.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         message.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # ¸ÄÎª Minimum
+        message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # ï¿½ï¿½Îª Minimum
         
         # Set rich text content
         formatted_text = self.format_text(text, is_user)
@@ -144,7 +147,7 @@ class ChatWidget(QWidget):
         # Adjust text browser size
         message.document().adjustSize()
         content_height = message.document().size().height()
-        message.setFixedHeight(content_height + 10)  # Ìí¼ÓÒ»Ð©±ß¾à
+        message.setFixedHeight(content_height + 10)  # ï¿½ï¿½ï¿½ï¿½Ò»Ð©ï¿½ß¾ï¿½
         
         # Set styles
         bubble.setStyleSheet(f"""

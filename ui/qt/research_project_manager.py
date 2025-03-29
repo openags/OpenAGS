@@ -1,321 +1,291 @@
-from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QDir
-from PySide6.QtWidgets import QMenu, QMessageBox, QInputDialog, QFileDialog
-from PySide6.QtGui import QStandardItemModel, QStandardItem
-import sqlite3
+from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
+from PySide6.QtWidgets import QMenu, QMessageBox, QInputDialog
+from gscientist.project_manager import ProjectManager
 import os
-import shutil
 
-class ResearchDatabase:
-    def __init__(self, base_path=None):
-        self.db_path = "research_projects.db"
-        if base_path is None:
-            # 默认使用用户文档目录下的 Research Projects 文件夹
-            self.base_path = os.path.join(QDir.homePath(), "Documents", "Research Projects")
-        else:
-            self.base_path = base_path
-            
-        # 确保基础目录存在
-        os.makedirs(self.base_path, exist_ok=True)
-        self.create_database()
-    
-    def create_database(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # Create projects table with path column
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS projects (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                path TEXT NOT NULL,
-                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Create folders table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS folders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER,
-                parent_id INTEGER,
-                name TEXT NOT NULL,
-                folder_type TEXT NOT NULL,
-                path TEXT NOT NULL,
-                FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
+class TreeItem:
+    def __init__(self, data, parent=None):
+        self.parent_item = parent
+        self.item_data = data
+        self.child_items = []
 
-    def create_project(self, project_name):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # Create project directory
-        project_path = os.path.join(self.base_path, project_name)
-        os.makedirs(project_path, exist_ok=True)
-        
-        # Create project in database
-        cursor.execute("INSERT INTO projects (name, path) VALUES (?, ?)", 
-                      (project_name, project_path))
-        project_id = cursor.lastrowid
-        
-        # Create default folders
-        default_folders = {
-            "Literature Review": ["References"],
-            "Proposal": [],
-            "Experiment": [],
-            "Manuscript": []
-        }
-        
-        for folder_name, subfolders in default_folders.items():
-            folder_path = os.path.join(project_path, folder_name)
-            os.makedirs(folder_path, exist_ok=True)
-            
-            cursor.execute(
-                "INSERT INTO folders (project_id, parent_id, name, folder_type, path) VALUES (?, NULL, ?, 'default', ?)",
-                (project_id, folder_name, folder_path)
-            )
-            folder_id = cursor.lastrowid
-            
-            # Create subfolders if any
-            for subfolder in subfolders:
-                subfolder_path = os.path.join(folder_path, subfolder)
-                os.makedirs(subfolder_path, exist_ok=True)
-                cursor.execute(
-                    "INSERT INTO folders (project_id, parent_id, name, folder_type, path) VALUES (?, ?, ?, 'default', ?)",
-                    (project_id, folder_id, subfolder, subfolder_path)
-                )
-        
-        conn.commit()
-        conn.close()
-        return project_id
+    def appendChild(self, item):
+        self.child_items.append(item)
 
-    def rename_project(self, project_id, new_name):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # Get old project info
-        cursor.execute("SELECT name, path FROM projects WHERE id=?", (project_id,))
-        old_name, old_path = cursor.fetchone()
-        
-        # Calculate new path
-        new_path = os.path.join(os.path.dirname(old_path), new_name)
-        
-        # Rename directory
-        if os.path.exists(old_path):
-            os.rename(old_path, new_path)
-        
-        # Update database
-        cursor.execute("UPDATE projects SET name=?, path=? WHERE id=?", 
-                      (new_name, new_path, project_id))
-        
-        # Update paths in folders table
-        cursor.execute("SELECT id, path FROM folders WHERE project_id=?", (project_id,))
-        folders = cursor.fetchall()
-        for folder_id, folder_path in folders:
-            new_folder_path = folder_path.replace(old_path, new_path)
-            cursor.execute("UPDATE folders SET path=? WHERE id=?", 
-                         (new_folder_path, folder_id))
-        
-        conn.commit()
-        conn.close()
+    def child(self, row):
+        return self.child_items[row]
 
-    def delete_project(self, project_id):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # Get project path
-        cursor.execute("SELECT path FROM projects WHERE id=?", (project_id,))
-        project_path = cursor.fetchone()[0]
-        
-        # Delete project directory
-        if os.path.exists(project_path):
-            shutil.rmtree(project_path)
-        
-        # Delete from database (folders will be deleted due to CASCADE)
-        cursor.execute("DELETE FROM projects WHERE id=?", (project_id,))
-        
-        conn.commit()
-        conn.close()
+    def childCount(self):
+        return len(self.child_items)
 
-class ResearchProjectModel(QStandardItemModel):
+    def columnCount(self):
+        return 1
+
+    def data(self):
+        return self.item_data
+
+    def parent(self):
+        return self.parent_item
+
+    def row(self):
+        if self.parent_item:
+            return self.parent_item.child_items.index(self)
+        return 0
+
+class ResearchProjectModel(QAbstractItemModel):
+    # Define folder order
+    FOLDER_ORDER = {
+        "Literature Review": 0,
+        "Proposal": 1,
+        "Experiment": 2,
+        "Manuscript": 3
+    }
+
     def __init__(self, base_path=None):
         super().__init__()
-        self.db = ResearchDatabase(base_path)
-        self.setup_model()
-    
-    def setup_model(self):
-        self.clear()
-        root_item = self.invisibleRootItem()
-        
-        # Create "My Research" root item
-        my_research = QStandardItem("My Research")
-        my_research.setData("root", Qt.UserRole)  # 标记为根节点
-        root_item.appendRow(my_research)
-        
-        # Load existing projects from database
-        self.load_projects(my_research)
-    
-    def load_projects(self, parent_item):
-        conn = sqlite3.connect(self.db.db_path)
-        cursor = conn.cursor()
-        
-        # Get all projects
-        cursor.execute("SELECT id, name, path FROM projects")
-        projects = cursor.fetchall()
-        
-        for project_id, project_name, project_path in projects:
-            project_item = QStandardItem(project_name)
-            project_item.setData(project_id, Qt.UserRole)
-            project_item.setData(project_path, Qt.UserRole + 1)
-            parent_item.appendRow(project_item)
+        self.project_manager = ProjectManager(base_path)
+        self.root_item = TreeItem({"name": "Projects"})
+        self.setupModelData()
+
+    def _get_folder_sort_order(self, folder_name):
+        return self.FOLDER_ORDER.get(folder_name, len(self.FOLDER_ORDER))
+
+    def setupModelData(self):
+        self.projects = self.project_manager.list_projects()
+        if not self.projects:
+            project = self.create_new_project("Default Research Project")
+            self.projects = [project]
+
+        for project in self.projects:
+            project_item = TreeItem(project, self.root_item)
+            self.root_item.appendChild(project_item)
             
-            # Load project folders
-            cursor.execute("""
-                SELECT id, name, path, parent_id 
-                FROM folders 
-                WHERE project_id=? AND parent_id IS NULL
-                """, (project_id,))
-            root_folders = cursor.fetchall()
+            # Load folders for this project
+            folders = self.project_manager.get_project_structure(project["id"])
             
-            for folder_id, folder_name, folder_path, _ in root_folders:
-                folder_item = QStandardItem(folder_name)
-                folder_item.setData(folder_id, Qt.UserRole)
-                folder_item.setData(folder_path, Qt.UserRole + 1)
-                project_item.appendRow(folder_item)
+            # Sort folders based on predefined order
+            folders.sort(key=lambda x: self._get_folder_sort_order(x["name"]))
+            
+            folder_items = {}
+            
+            # First pass: create all folder items
+            for folder in folders:
+                folder_item = TreeItem(folder, project_item if folder["parent_id"] is None else folder_items[folder["parent_id"]])
+                folder_items[folder["id"]] = folder_item
                 
-                # Load subfolders
-                self.load_subfolders(cursor, folder_item, folder_id)
+                if folder["parent_id"] is None:
+                    project_item.appendChild(folder_item)
+                else:
+                    parent_item = folder_items[folder["parent_id"]]
+                    # Find the correct position to insert based on sort order
+                    insert_pos = 0
+                    for i, child in enumerate(parent_item.child_items):
+                        if self._get_folder_sort_order(child.data()["name"]) > self._get_folder_sort_order(folder["name"]):
+                            break
+                        insert_pos = i + 1
+                    parent_item.child_items.insert(insert_pos, folder_item)
+
+    def index(self, row, column, parent=QModelIndex()):
+        if not self.hasIndex(row, column, parent):
+            return QModelIndex()
+
+        if not parent.isValid():
+            parent_item = self.root_item
+        else:
+            parent_item = parent.internalPointer()
+
+        child_item = parent_item.child(row)
+        if child_item:
+            return self.createIndex(row, column, child_item)
+        return QModelIndex()
+
+    def parent(self, index):
+        if not index.isValid():
+            return QModelIndex()
+
+        child_item = index.internalPointer()
+        parent_item = child_item.parent()
+
+        if parent_item == self.root_item:
+            return QModelIndex()
+
+        return self.createIndex(parent_item.row(), 0, parent_item)
+
+    def rowCount(self, parent=QModelIndex()):
+        if parent.column() > 0:
+            return 0
+
+        if not parent.isValid():
+            parent_item = self.root_item
+        else:
+            parent_item = parent.internalPointer()
+
+        return parent_item.childCount()
+
+    def columnCount(self, parent=QModelIndex()):
+        return 1
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+
+        item = index.internalPointer()
         
-        conn.close()
-    
-    def load_subfolders(self, cursor, parent_item, parent_folder_id):
-        cursor.execute("""
-            SELECT id, name, path 
-            FROM folders 
-            WHERE parent_id=?
-            """, (parent_folder_id,))
-        subfolders = cursor.fetchall()
-        
-        for folder_id, folder_name, folder_path in subfolders:
-            folder_item = QStandardItem(folder_name)
-            folder_item.setData(folder_id, Qt.UserRole)
-            folder_item.setData(folder_path, Qt.UserRole + 1)
-            parent_item.appendRow(folder_item)
+        if role == Qt.DisplayRole:
+            return item.data()["name"]
+
+        return None
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            if section == 0:
+                return "Project Name"
+        return None
 
     def create_new_project(self, project_name):
-        project_id = self.db.create_project(project_name)
-        my_research = self.item(0)  # Get "My Research" item
-        
-        project_path = os.path.join(self.db.base_path, project_name)
-        
-        # Create new project item
-        project_item = QStandardItem(project_name)
-        project_item.setData(project_id, Qt.UserRole)
-        project_item.setData(project_path, Qt.UserRole + 1)
-        my_research.appendRow(project_item)
-        
-        # Add default folders with References subfolder
-        folders = {
-            "Literature Review": ["References"],
-            "Proposal": [],
-            "Experiment": [],
-            "Manuscript": []
-        }
-        
-        for folder_name, subfolders in folders.items():
-            folder_item = QStandardItem(folder_name)
-            folder_path = os.path.join(project_path, folder_name)
-            folder_item.setData(folder_path, Qt.UserRole + 1)
-            project_item.appendRow(folder_item)
-            
-            # Add subfolders if any
-            for subfolder in subfolders:
-                subfolder_item = QStandardItem(subfolder)
-                subfolder_path = os.path.join(folder_path, subfolder)
-                subfolder_item.setData(subfolder_path, Qt.UserRole + 1)
-                folder_item.appendRow(subfolder_item)
-        
-        return project_item
+        """Create a new research project."""
+        project_id = self.project_manager.create_project(project_name)
+        project = self.project_manager.get_project(project_id)
+        project_item = TreeItem(project, self.root_item)
+        self.beginInsertRows(QModelIndex(), self.root_item.childCount(), self.root_item.childCount())
+        self.root_item.appendChild(project_item)
+        self.endInsertRows()
+        return project
+
+    def rename_project(self, project_id, new_name):
+        """Rename an existing project."""
+        self.project_manager.rename_project(project_id, new_name)
+        # Update the local project list
+        for i in range(self.root_item.childCount()):
+            project_item = self.root_item.child(i)
+            if project_item.data()["id"] == project_id:
+                project_item.item_data["name"] = new_name
+                self.dataChanged.emit(self.index(i, 0, QModelIndex()), self.index(i, 0, QModelIndex()))
+                break
+
+    def delete_project(self, project_id):
+        """Delete a research project."""
+        for i in range(self.root_item.childCount()):
+            project_item = self.root_item.child(i)
+            if project_item.data()["id"] == project_id:
+                self.beginRemoveRows(QModelIndex(), i, i)
+                self.root_item.child_items.pop(i)
+                self.endRemoveRows()
+                break
+        self.project_manager.delete_project(project_id)
+
+    def list_projects(self):
+        """List all research projects."""
+        return self.projects
 
 class ResearchTreeView:
     def __init__(self, tree_view, base_path=None):
         self.tree_view = tree_view
         self.model = ResearchProjectModel(base_path)
         self.tree_view.setModel(self.model)
-        
+
         # Setup context menu
         self.tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_view.customContextMenuRequested.connect(self.show_context_menu)
-        
+
         # Setup double click for rename
         self.tree_view.doubleClicked.connect(self.handle_double_click)
-    
+
     def show_context_menu(self, position):
         index = self.tree_view.indexAt(position)
-        
+
+        # If no valid index, allow only "New Research Project"
         if not index.isValid():
+            menu = QMenu()
+            new_project_action = menu.addAction("New Research Project")
+            action = menu.exec_(self.tree_view.viewport().mapToGlobal(position))
+            if action == new_project_action:
+                self.create_new_project()
             return
-            
-        item = self.model.itemFromIndex(index)
+
+        # Get the selected item data
+        item = index.internalPointer().data()
+        
+        # Create menu based on item type
         menu = QMenu()
         
-        if item.data(Qt.UserRole) == "root":  # My Research root node
+        # Check if this is a project (has 'id' in item data) or a folder
+        if 'id' in item and 'parent_id' not in item:
+            # This is a project item
             new_project_action = menu.addAction("New Research Project")
+            rename_action = menu.addAction("Rename Project")
+            delete_action = menu.addAction("Delete Project")
+            
             action = menu.exec_(self.tree_view.viewport().mapToGlobal(position))
             
             if action == new_project_action:
                 self.create_new_project()
-        elif item.parent() == self.model.item(0):  # Project node
-            rename_action = menu.addAction("Rename Project")
-            delete_action = menu.addAction("Delete Project")
-            action = menu.exec_(self.tree_view.viewport().mapToGlobal(position))
-            
-            if action == rename_action:
+            elif action == rename_action:
                 self.rename_project(item)
             elif action == delete_action:
                 self.delete_project(item)
-    
+        else:
+            # This is a folder item
+            menu.addAction("Open Folder")
+            menu.addSeparator()
+            menu.addAction("View in Explorer")
+            
+            action = menu.exec_(self.tree_view.viewport().mapToGlobal(position))
+            
+            if action and action.text() == "View in Explorer":
+                path = item.get('path', '')
+                if path and os.path.exists(path):
+                    os.startfile(path)
+
     def create_new_project(self):
-        name, ok = QInputDialog.getText(self.tree_view, 
-                                      "New Research Project",
-                                      "Enter project name:")
+        """Prompt the user to create a new research project."""
+        name, ok = QInputDialog.getText(
+            self.tree_view,
+            "New Research Project",
+            "Enter project name:"
+        )
         if ok and name:
             self.model.create_new_project(name)
-    
-    def rename_project(self, item):
-        project_id = item.data(Qt.UserRole)
-        old_name = item.text()
-        new_name, ok = QInputDialog.getText(self.tree_view,
-                                          "Rename Project",
-                                          "Enter new name:",
-                                          text=old_name)
-        if ok and new_name and new_name != old_name:
-            self.model.db.rename_project(project_id, new_name)
-            item.setText(new_name)
-            # Update item path
-            new_path = os.path.join(os.path.dirname(item.data(Qt.UserRole + 1)), new_name)
-            item.setData(new_path, Qt.UserRole + 1)
-    
-    def delete_project(self, item):
-        reply = QMessageBox.question(self.tree_view,
-                                   "Delete Project",
-                                   f"Are you sure you want to delete project '{item.text()}'?\n"
-                                   f"This will delete all project files and cannot be undone.",
-                                   QMessageBox.Yes | QMessageBox.No,
-                                   QMessageBox.No)
-        
-        if reply == QMessageBox.Yes:
-            project_id = item.data(Qt.UserRole)
-            self.model.db.delete_project(project_id)
-            self.model.item(0).removeRow(item.row())
-    
-    def handle_double_click(self, index):
-        item = self.model.itemFromIndex(index)
-        if item.parent() == self.model.item(0):  # Project node
-            self.rename_project(item)
 
-    def get_base_path(self):
-        return self.model.db.base_path
+    def rename_project(self, item):
+        """Prompt the user to rename an existing project."""
+        project_id = item["id"]
+        old_name = item["name"]
+        new_name, ok = QInputDialog.getText(
+            self.tree_view,
+            "Rename Project",
+            "Enter new name:",
+            text=old_name
+        )
+        if ok and new_name and new_name != old_name:
+            self.model.rename_project(project_id, new_name)
+
+    def delete_project(self, item):
+        """Prompt the user to confirm and delete a project."""
+        reply = QMessageBox.question(
+            self.tree_view,
+            "Delete Project",
+            f"Are you sure you want to delete project '{item['name']}'?\n"
+            f"This will delete all project files and cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            project_id = item["id"]
+            self.model.delete_project(project_id)
+
+    def handle_double_click(self, index):
+        """Handle double-click on items."""
+        if not index.isValid():
+            return
+            
+        item = index.internalPointer().data()
+        if 'id' in item and 'parent_id' not in item:
+            # This is a project item
+            self.rename_project(item)
+        else:
+            # This is a folder item
+            path = item.get('path', '')
+            if path and os.path.exists(path):
+                os.startfile(path)
