@@ -5,10 +5,6 @@ setup(
     version='0.1.0',
     description='Automated research assistant system',
     author='Your Name',
-    packages=find_packages(),
-    install_requires=[
-        'pytest>=7.0.0',
-        'gscientist>=0.1.0',
-    ],
-    python_requires='>=3.8',
+    packages=find_packages(include=['gscientist', 'gscientist.*']),  # Only include the gscientist package
+    python_requires='>=3.8',  # Specify the minimum Python version
 )
