@@ -7,3 +7,7 @@ agents:
     url: "https://api.deepseek.com"
     model_config_dict:  # Additional model configuration
       temperature: 0.7
+# Research Projects Configuration
+projects:
+  project_manager:
+    config_path: projects.yml
