@@ -1,0 +1,13 @@
+agents:
+
+  GSAgent:
+    model_platform: "deepseek"
+    model_type: "deepseek-chat"
+    api_key: "sk-a834931932bc4979a0d73341f753747e"
+    url: "https://api.deepseek.com"
+    model_config_dict:  # Additional model configuration
+      temperature: 0.7
+# Research Projects Configuration
+projects:
+  project_manager:
+    config_path: projects.yml
