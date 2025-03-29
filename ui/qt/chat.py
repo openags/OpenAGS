@@ -9,7 +9,7 @@ from chat_ui import Ui_Form
 import yaml
 from camel.messages import BaseMessage
 
-# 将项目根目录添加到 PYTHONPATH
+# Add project root directory to PYTHONPATH
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
@@ -19,9 +19,9 @@ from gscientist.agents.gs_agent import GSAgent
 
 
 class AIThread(QThread):
-    """处理AI回复的线程"""
-    reply_ready = Signal(str)  # 用于发送AI回复的信号
-    error_occurred = Signal(str)  # 用于发送错误信息的信号
+    """Thread for handling AI responses"""
+    reply_ready = Signal(str)  # Signal for sending AI responses
+    error_occurred = Signal(str)  # Signal for sending error messages
 
     def __init__(self, agent, message):
         super().__init__()
@@ -41,10 +41,10 @@ class AIThread(QThread):
             if response and response.msgs:
                 self.reply_ready.emit(response.msgs[0].content)
             else:
-                self.error_occurred.emit("未收到有效回复，请重试。")
+                self.error_occurred.emit("No valid response received, please try again.")
         except Exception as e:
             print(f"Error generating reply: {str(e)}")
-            self.error_occurred.emit(f"抱歉，出现了一些问题: {str(e)}")
+            self.error_occurred.emit(f"Sorry, something went wrong: {str(e)}")
 
 class ChatWidget(QWidget):
     def __init__(self, parent=None):
@@ -52,7 +52,7 @@ class ChatWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         
-        # 初始化 AutoGen agent
+        # Initialize AutoGen agent
         config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "config.yml")
         with open(config_path, 'r', encoding='utf-8') as file:
             config = yaml.safe_load(file)
@@ -60,42 +60,42 @@ class ChatWidget(QWidget):
         llm_config = config['agents'].get("GSAgent")
         self.agent = GSAgent("GSAgent", llm_config) 
         
-        # 连接信号
+        # Connect signals
         self.ui.sendButton.clicked.connect(self.on_send_clicked)
         self.ui.messageInput.textChanged.connect(self.adjust_input_height)
         
-        # 初始化AI线程
+        # Initialize AI thread
         self.ai_thread = None
         
     def format_text(self, text, is_user=True):
-        """格式化文本，处理代码块、链接等"""
+        """Format text, handle code blocks, links, etc."""
         formatted_text = text
         
-        # 处理代码块 (被```包围的内容)
+        # Handle code blocks (content surrounded by ```)
         code_pattern = r"```(.*?)```"
         formatted_text = re.sub(code_pattern, self._format_code_block, formatted_text, flags=re.DOTALL)
         
-        # 处理链接
+        # Handle links
         url_pattern = r'https?://\S+'
         formatted_text = re.sub(url_pattern, 
             lambda m: f'<a href="{m.group()}" style="color: {"white" if is_user else "blue"}">{m.group()}</a>', 
             formatted_text)
         
-        # 处理粗体 **text**
+        # Handle bold text **text**
         bold_pattern = r'\*\*(.*?)\*\*'
         formatted_text = re.sub(bold_pattern, r'<b>\1</b>', formatted_text)
         
-        # 处理斜体 *text*
+        # Handle italic text *text*
         italic_pattern = r'\*(.*?)\*'
         formatted_text = re.sub(italic_pattern, r'<i>\1</i>', formatted_text)
         
-        # 处理换行
+        # Handle line breaks
         formatted_text = formatted_text.replace('\n', '<br>')
         
         return formatted_text
     
     def _format_code_block(self, match):
-        """格式化代码块"""
+        """Format code blocks"""
         code = match.group(1).strip()
         return f"""
             <pre style='
@@ -110,12 +110,12 @@ class ChatWidget(QWidget):
         """
     
     def add_message(self, text, is_user=True):
-        """添加一条消息"""
+        """Add a message"""
         message_widget = QWidget()
         layout = QHBoxLayout(message_widget)
         layout.setContentsMargins(10, 5, 10, 5)
         
-        # 创建头像
+        # Create avatar
         avatar = QLabel()
         avatar.setFixedSize(40, 40)
         avatar_path = os.path.join("resources", "user_avatar.png" if is_user else "ai_avatar.png")
@@ -124,29 +124,29 @@ class ChatWidget(QWidget):
             print(f"Warning: Could not load avatar image from {avatar_path}")
         avatar.setPixmap(pixmap.scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         
-        # 创建气泡
+        # Create bubble
         bubble = QFrame()
         bubble_layout = QHBoxLayout(bubble)
         bubble_layout.setContentsMargins(10, 5, 10, 5)
         bubble.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # 改为 Minimum
         
-        # 使用 QTextBrowser
+        # Use QTextBrowser
         message = QTextBrowser()
         message.setOpenExternalLinks(True)
         message.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         message.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # 改为 Minimum
         
-        # 设置富文本内容
+        # Set rich text content
         formatted_text = self.format_text(text, is_user)
         message.setHtml(formatted_text)
         
-        # 调整文本浏览器大小
+        # Adjust text browser size
         message.document().adjustSize()
         content_height = message.document().size().height()
         message.setFixedHeight(content_height + 10)  # 添加一些边距
         
-        # 设置样式
+        # Set styles
         bubble.setStyleSheet(f"""
             QFrame {{
                 background-color: {'#007AFF' if is_user else '#E9E9EB'};
@@ -161,7 +161,7 @@ class ChatWidget(QWidget):
             }}
         """)
         
-        # 布局排列
+        # Layout arrangement
         if is_user:
             bubble_layout.addWidget(message)
             layout.addWidget(bubble)
@@ -171,29 +171,29 @@ class ChatWidget(QWidget):
             layout.addWidget(bubble)
             bubble_layout.addWidget(message)
         
-        # 添加到消息列表
+        # Add to message list
         self.ui.messageLayout.insertWidget(
             self.ui.messageLayout.count() - 1,
             message_widget
         )
         
-        # 滚动到底部
+        # Scroll to bottom
         self.ui.scrollArea.verticalScrollBar().setValue(
             self.ui.scrollArea.verticalScrollBar().maximum()
         )
 
     def on_send_clicked(self):
-        """发送按钮点击事件"""
+        """Send button click event"""
         text = self.ui.messageInput.toPlainText().strip()
         if text:
-            # 显示用户消息
+            # Show user message
             self.add_message(text, True)
             self.ui.messageInput.clear()
             
-            # 禁用发送按钮
+            # Disable send button
             self.ui.sendButton.setEnabled(False)
             
-            # 创建并启动AI回复线程
+            # Create and start AI response thread
             self.ai_thread = AIThread(self.agent, text)
             self.ai_thread.reply_ready.connect(self.handle_ai_reply)
             self.ai_thread.error_occurred.connect(self.handle_error)
@@ -201,15 +201,15 @@ class ChatWidget(QWidget):
             self.ai_thread.start()
 
     def handle_ai_reply(self, reply):
-        """处理AI回复"""
+        """Handle AI response"""
         self.add_message(reply, False)
 
     def handle_error(self, error_message):
-        """处理错误"""
+        """Handle error"""
         self.add_message(error_message, False)
     
     def adjust_input_height(self):
-        """调整输入框高度"""
+        """Adjust input box height"""
         doc_height = self.ui.messageInput.document().size().height()
         new_height = min(max(50, doc_height + 10), 200)
         self.ui.messageInput.setFixedHeight(int(new_height))
