@@ -3,7 +3,7 @@ agents:
   GSAgent:
     model_platform: "deepseek"
     model_type: "deepseek-chat"
-    api_key: "xxx"
+    api_key: "xxxx"
     url: "https://api.deepseek.com"
     model_config_dict:  # Additional model configuration
       temperature: 0.7
