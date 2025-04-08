@@ -2,18 +2,18 @@ from gscientist.db.session import get_db
 from gscientist.db.models import Project
 
 class ProjectService:
-    """锟斤拷锟斤拷锟斤拷目锟斤拷锟斤拷锟斤拷锟斤拷"""
+    """科研项目管理服务"""
     
     def __init__(self):
         self.db = get_db()
 
     def create_project(self, name: str):
-        """锟斤拷锟斤拷锟斤拷锟斤拷目"""
+        """创建新项目"""
         project = Project(name=name)
         self.db.add(project)
         self.db.commit()
         return project
 
     def list_projects(self):
-        """锟叫筹拷锟斤拷锟斤拷锟斤拷目"""
+        """列出所有项目"""
         return self.db.query(Project).all()
