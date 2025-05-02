@@ -4,9 +4,11 @@ from camel.agents import ChatAgent
 from camel.messages import BaseMessage
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
+from gscientist.agents.agent import Agent
 
-class GSAgent(ChatAgent):
+class GSAgent(ChatAgent, Agent):
     def __init__(self, name='GSAgent', llm_config=None, tools=None):
+        Agent.__init__(self, name)
         """Initialize a GSAgent instance.
 
         Args:
@@ -43,12 +45,26 @@ class GSAgent(ChatAgent):
             model_config_dict=llm_config["model_config_dict"]
         )
         
-        super().__init__(
+        ChatAgent.__init__(
+            self,
             system_message=sys_msg,
             model=model,
             tools=tools,
             message_window_size=10  # Maintain conversation history window
         )
+
+    def reset(self):
+        self.log("Resetting GSAgent...")
+        self.state.clear()
+
+    def step(self, input_data):
+        self.log(f"Processing input: {input_data}")
+        user_msg = BaseMessage.make_user_message(
+            role_name="User",
+            content=input_data
+        )
+        response = ChatAgent.step(self, user_msg)
+        return response.msgs[0].content
         
 
 if __name__ == "__main__":
@@ -59,12 +75,6 @@ if __name__ == "__main__":
 
     agent = GSAgent('GSAgent', config)
     
-    # Create user message
-    user_msg = BaseMessage.make_user_message(
-        role_name="User",
-        content="Give me investment suggestion in 3 bullet points."
-    )
-    
     # Get response
-    response = agent.step(user_msg)
-    print(response.msgs[0].content)
+    response = agent.step("Give me investment suggestion in 3 bullet points.")
+    print(response)

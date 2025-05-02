@@ -6,16 +6,11 @@ To address these challenges, it is crucial to develop automatic systems that can
 Foundation AI models, such as large language models, are trained on vast amount of data from diverse sources, enabling them to acquire knowledge across various scientific disciplines. Therefore, it is promising to build the generalist AI robot scientist for autonomous research based on these foundation models and robot technologies.
 
 <p align="center">
-  <img src="docs/images/ui.png" alt="UI">
+  <img src="docs/images/web-ui.png" alt="UI">
   <br>
   <em>UI</em>
 </p>
 
-<p align="center">
-  <img src="docs/images/framework4.png" alt="Framework and Vision">
-  <br>
-  <em>Auto Research Agents framework and vision</em>
-</p>
 
 ## Overview
 
@@ -28,7 +23,14 @@ Phase 2: Integration of Robotics
 As the project matures and the capabilities of our agents evolve, we plan to introduce robotics to carry out physical tasks and experiments in the laboratory. 
 
 <p align="center">
-  <img src="docs/images/future_timeline.jpg" alt="Futrue timeline">
+  <img src="docs/images/ags_framework.jpg" alt="Framework and Vision">
+  <br>
+  <em>Auto Research Agents framework and vision</em>
+</p>
+
+
+<p align="center">
+  <img src="docs/images/ags_timeline.jpg" alt="Futrue timeline">
   <br>
   <em>Auto Research Timeline</em>
 </p>
@@ -66,11 +68,17 @@ To make a contribution or suggest an idea to this project.
 
 ## Citation
 ```
-bibtex
-@misc{auto-research,
-  title        = {Autonomous Generalist Scientist: Towards and Beyond Human-level Automatic Research Using Foundation Model-Based AI Agents and Robots (A Position)},
-  author       = {Starkson Zhang, Alfredo Pearson, Zhenting Wang, Welcome Coauthors},
-  year         = {2024},
-  journal      = {DOI: 10.13140/RG.2.2.35148.01923},
+@article{zhang2025scaling,
+  title={Scaling Laws in Scientific Discovery with AI and Robot Scientists},
+  author={Zhang, Pengsong and Zhang, Heng and Xu, Huazhe and Xu, Renjun and Wang, Zhenting and Wang, Cong and Garg, Animesh and Li, Zhibin and Ajoudani, Arash and Liu, Xinyu},
+  journal={arXiv preprint arXiv:2503.22444},
+  year={2025}
+}
+
+@article{zhangautonomous,
+  title={Autonomous Generalist Scientist: Towards and Beyond Human-Level Scientific Research with Agentic and Embodied AI and Robots},
+  author={Zhang, Pengsong and Zhang, Heng and Xu, Huazhe and Xu, Renjun and Wang, Zhenting and Wang, Cong and Garg, Animesh and Li, Zhibin and Liu, Xinyu and Ajoudani, Arash},
+  journal={ResearchGate preprint RG.2.2.35148.01923},
+  year={2024}  
 }
 ```
