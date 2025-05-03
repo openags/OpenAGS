@@ -37,30 +37,69 @@ As the project matures and the capabilities of our agents evolve, we plan to int
 
 ## Directory Structure
 
-- `gscientist/`: The main directory housing all the components of Nova.
-  - `core/`: System management.
-  - `agents/`: Contains the agent implementations with `agent.py` serving as a template or a particular instance.
-  - `communication/`: Contains the ros like communication mechanism.  
-  - `llm/`: Dedicated to language model functionality, where `llm.py` defines language model-related operations.
-  - `tools/`: A suite of utility scripts to augment the functionality of agents.
-    - `builtins/`: Essential tools that come with the Nova framework.
-    - `plugins/`: Dynamically loaded modules that extend the capabilities of Nova agents.
-- `ui/`: User interface assets that define how users interact with the Nova framework.
-  - `frontend/`: Web ui.
-  - `qt/`:  The graphical user interface components built with PyQt or PySide6 for user interaction.
+- `gscientist/`: The main directory containing the core components of Auto-Research.
+  - `agents/`: Contains the agent implementations.
+  - `server/`: Hosts the backend API and server-related code.
+  - `tools/`: Utility scripts and built-in tools.
+  - Other modules such as `project_manager.py` and `__init__.py` reside here.
+- `ui/`: User interface assets.
+  - `frontend/`: Web UI assets.
+  - `qt/`: (Optional) Desktop UI components built with PyQt or PySide6.
+- `config/`: Configuration files (e.g., `config.yml`).
+- `docs/`: Documentation files and guides.
+- `tests/`: Unit and integration tests.
+- Root-level files:
+  - `start.py`: Entry point to run both backend and frontend servers.
+  - `setup.py`, `requirements.txt`, `.gitignore`, `LICENSE`, and this `README.md`.
 
 ## Getting Started
 
-Todo: Instructions on how to set up the environment, install dependencies, and run the initial configuration.
+### Install Dependencies
+Ensure you have Python 3.8 or later installed. Then install the required packages:
+```bash
+pip install -r requirements.txt
+```
 
-## Contribution
+### Configure the Project
+Copy the template configuration file and adjust it as needed:
+```bash
+copy config\config_template.yml config\config.yml
+```
+(On Windows, you may also use xcopy or copy manually via the file explorer.)
 
-To make a contribution or suggest an idea to this project.
+### Initialize the Project
+The project manager automatically creates the database (research_projects.db) in the project root when you create a project.
 
-* [Discord server](https://discord.gg/fc2MtCmd)
+### Run the Application
+Start both the backend and frontend servers by running:
+```bash
+python start.py
+```
+You can then access:
+- The FastAPI server at http://localhost:8000
+- The frontend UI at http://localhost:8080
 
-* [Outline-Google doc](https://docs.google.com/document/d/1fgZlbtTNTKPP3TpHL5X6xJlBxpIoKeellfeJn-V7zSA/edit?usp=sharing)
+### Run Tests
+To run the unit and integration tests, execute:
+```bash
+pytest
+```
 
+### Contributions
+Contributions are welcome! To help improve the project, please follow these guidelines:
+
+#### Reporting Issues
+Use the GitHub issue tracker to report bugs or request enhancements.
+
+#### Submitting Pull Requests
+- Fork the repository and create a new branch for your feature or bug fix.
+- Ensure your changes adhere to the project’s coding standards.
+- Add or update documentation as needed.
+- Submit a pull request with a clear description of your changes.
+
+#### Discussion and Community
+Join our Discord server for discussions, or check our Outline Google Doc for project ideas and planning.
+For detailed guidelines, please refer to the Contribution Guide.
 
 ## Star History
 
