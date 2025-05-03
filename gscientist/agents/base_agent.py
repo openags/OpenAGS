@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
+import asyncio
+from typing import Union, Generator, AsyncGenerator, Dict, Any, Optional
 
-class Agent(ABC):
+class BaseAgent(ABC):
     """
     A base class for all agents. Defines common interfaces and behaviors.
     """
@@ -15,8 +17,26 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def step(self, input_data):
-        """Perform a single step of interaction with the agent."""
+    def step(self, input_data) -> Any:
+        """
+        Perform a single step of interaction with the agent.
+        Returns the complete response (non-streaming).
+        """
+        pass
+
+    @abstractmethod
+    async def a_step(self, input_data) -> Any:
+        """
+        Async version of step that returns the complete response.
+        """
+        pass
+
+    @abstractmethod
+    async def stream_step(self, input_data) -> AsyncGenerator[str, None]:
+        """
+        Stream the agent's response one token/chunk at a time.
+        Returns an async generator that yields response fragments.
+        """
         pass
 
     def log(self, message: str):
