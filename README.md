@@ -1,5 +1,5 @@
 # Auto-Research
-Autonomous Generalist Scientist: Towards and Beyond Human-level Automatic Research Using Foundation Model-Based AI Agents and Robots.
+Autonomous Generalist Scientist: Towards and Beyond Human-Level Scientific Research with Agentic and Embodied AI and Robots.
 
 The accelerating pace of scientific research highlights the need for more efficient, accurate, and comprehensive methodologies. Traditional research methods are often hindered by the limitations of manual experimentation and data collection in isolated environments, resulting in slow and resource-intensive processes. Besides, multidisciplinary research presents significant challenges due to the complexities of integrating knowledge from various fields, often surpassing the expertise of individual researchers. The limited knowledge base of single researchers constrains the scope and depth of inquiry, complicating efforts to fully explore complex interdisciplinary problems.
 To address these challenges, it is crucial to develop automatic systems that can dynamically interact with both physical and virtual environments while facilitating the integration of knowledge across multiple disciplines. 

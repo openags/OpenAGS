@@ -4,11 +4,11 @@ from camel.agents import ChatAgent
 from camel.messages import BaseMessage
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
-from gscientist.agents.agent import Agent
+from gscientist.agents.base_agent import BaseAgent
 
-class GSAgent(ChatAgent, Agent):
+class GSAgent(ChatAgent, BaseAgent):
     def __init__(self, name='GSAgent', llm_config=None, tools=None):
-        Agent.__init__(self, name)
+        BaseAgent.__init__(self, name)
         """Initialize a GSAgent instance.
 
         Args:
@@ -57,7 +57,7 @@ class GSAgent(ChatAgent, Agent):
         self.log("Resetting GSAgent...")
         self.state.clear()
 
-    def step(self, input_data):
+    def step(self, input_data: str) -> str:
         self.log(f"Processing input: {input_data}")
         user_msg = BaseMessage.make_user_message(
             role_name="User",
@@ -65,6 +65,18 @@ class GSAgent(ChatAgent, Agent):
         )
         response = ChatAgent.step(self, user_msg)
         return response.msgs[0].content
+
+    async def a_step(self, input_data: str) -> str:
+        """异步处理输入消息并返回字符串响应"""
+        return ""
+
+    async def stream_step(self, input_data: str):
+        """流式处理输入消息并返回响应片段"""
+        return ""
+
+    def reset(self):
+        self.log("Resetting GSAgent...")
+        self.state.clear()
         
 
 if __name__ == "__main__":

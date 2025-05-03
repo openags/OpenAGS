@@ -4,610 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Auto-Research Platform</title>
-  <!-- 引入Google字体 -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- 引入Font Awesome图标 -->
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    /* 全局样式 */
-    :root {
-      --bg-primary: #171A21;
-      --bg-secondary: #1E2029;
-      --bg-tertiary: #282C3A;
-      --accent-color: #FC3C5F;
-      --accent-hover: #E93557;
-      --text-primary: #F5F5F7;
-      --text-secondary: #9DA2AE;
-      --text-muted: #6B7280;
-      --border-color: rgba(75, 85, 99, 0.3);
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      --radius-sm: 0.25rem;
-      --radius-md: 0.375rem;
-      --radius-lg: 0.5rem;
-      --transition: all 0.2s ease-in-out;
-      --sidebar-width: 260px;
-      --sidebar-collapsed-width: 64px;
-    }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: 'Inter', sans-serif;
-      color: var(--text-primary);
-      background-color: var(--bg-primary);
-      min-height: 100vh;
-      overflow: hidden;
-    }
-    
-    /* 布局 */
-    .app-container {
-      display: flex;
-      height: 100vh;
-    }
-    
-    /* 侧边栏样式 */
-    .sidebar {
-      width: var(--sidebar-width);
-      background-color: var(--bg-secondary);
-      border-right: 1px solid var(--border-color);
-      display: flex;
-      flex-direction: column;
-      transition: width var(--transition);
-      overflow: hidden;
-      position: relative;
-    }
-    
-    .sidebar.collapsed {
-      width: var(--sidebar-collapsed-width);
-    }
-    
-    .toggle-sidebar {
-      position: absolute;
-      right: 10px;
-      top: 20px;
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      cursor: pointer;
-      z-index: 10;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: var(--transition);
-    }
-    
-    .toggle-sidebar:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-      color: var(--text-primary);
-    }
-    
-    .sidebar-header {
-      display: flex;
-      align-items: center;
-      padding: 1.25rem;
-      border-bottom: 1px solid var(--border-color);
-    }
-    
-    .logo {
-      font-weight: 700;
-      font-size: 1.125rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      color: var(--text-primary);
-      text-decoration: none;
-      white-space: nowrap;
-    }
-    
-    .logo i {
-      color: var(--accent-color);
-    }
-    
-    .sidebar.collapsed .logo-text {
-      display: none;
-    }
-    
-    .new-project-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      background-color: var(--accent-color);
-      color: white;
-      border: none;
-      border-radius: var(--radius-md);
-      padding: 0.75rem 1rem;
-      margin: 1rem;
-      font-weight: 500;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: var(--transition);
-      width: calc(100% - 2rem);
-      white-space: nowrap;
-    }
-    
-    .sidebar.collapsed .new-project-btn {
-      padding: 0.75rem;
-      width: calc(var(--sidebar-collapsed-width) - 2rem);
-    }
-    
-    .sidebar.collapsed .new-project-btn span {
-      display: none;
-    }
-    
-    .new-project-btn:hover {
-      background-color: var(--accent-hover);
-    }
-    
-    .projects-section {
-      padding: 0.5rem 0;
-      overflow-y: auto;
-      flex: 1;
-    }
-    
-    .projects-header {
-      padding: 0.5rem 1rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      white-space: nowrap;
-    }
-    
-    .sidebar.collapsed .projects-header {
-      display: none;
-    }
-    
-    .project-list {
-      list-style: none;
-      margin-top: 0.25rem;
-    }
-    
-    .project-item {
-      position: relative;
-    }
-    
-    .project-item.active::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 3px;
-      background-color: var(--accent-color);
-      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-    }
-    
-    .project-button {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.75rem 1rem;
-      width: 100%;
-      text-align: left;
-      background: none;
-      border: none;
-      color: var(--text-primary);
-      font-size: 0.9375rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-      border-radius: var(--radius-sm);
-      white-space: nowrap;
-    }
-    
-    .sidebar.collapsed .project-button {
-      justify-content: center;
-    }
-    
-    .sidebar.collapsed .project-text,
-    .sidebar.collapsed .project-arrow {
-      display: none;
-    }
-    
-    .project-button:hover {
-      background-color: rgba(255, 255, 255, 0.05);
-    }
-    
-    .project-item.active > .project-button {
-      background-color: rgba(252, 60, 95, 0.1);
-      color: var(--accent-color);
-    }
-    
-    .project-icon {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    
-    .project-children {
-      margin-left: 1.5rem;
-      overflow: hidden;
-      max-height: 0;
-      transition: var(--transition);
-    }
-    
-    .sidebar.collapsed .project-children {
-      display: none;
-    }
-    
-    .project-item.expanded > .project-children {
-      max-height: 500px; /* 足够大的值 */
-    }
-    
-    .project-child {
-      list-style: none;
-    }
-    
-    .child-button {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.625rem 1rem;
-      width: 100%;
-      text-align: left;
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: var(--transition);
-      border-radius: var(--radius-sm);
-      white-space: nowrap;
-    }
-    
-    .child-button:hover {
-      background-color: rgba(255, 255, 255, 0.05);
-      color: var(--text-primary);
-    }
-    
-    .child-button.active {
-      color: var(--accent-color);
-      background-color: rgba(252, 60, 95, 0.1);
-    }
-    
-    /* 用户资料部分 */
-    .user-profile {
-      margin-top: auto;
-      padding: 1rem;
-      display: flex;
-      align-items: center;
-      border-top: 1px solid var(--border-color);
-    }
-    
-    .avatar {
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 50%;
-      background-color: var(--accent-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      color: white;
-      margin-right: 0.75rem;
-      flex-shrink: 0;
-    }
-    
-    .user-info {
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-    
-    .sidebar.collapsed .user-info {
-      display: none;
-    }
-    
-    .user-name {
-      font-weight: 500;
-      font-size: 0.9375rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .user-status {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-    }
-    
-    .user-actions {
-      margin-left: 0.5rem;
-    }
-    
-    .sidebar.collapsed .user-actions {
-      display: none;
-    }
-    
-    .user-menu-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: var(--transition);
-      width: 2rem;
-      height: 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: var(--radius-sm);
-    }
-    
-    .user-menu-btn:hover {
-      background-color: rgba(255, 255, 255, 0.05);
-      color: var(--text-primary);
-    }
-    
-    /* 主内容区域 */
-    .main-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    
-    .content-header {
-      padding: 1rem 1.5rem;
-      display: flex;
-      align-items: center;
-      border-bottom: 1px solid var(--border-color);
-      background-color: var(--bg-secondary);
-    }
-    
-    .page-title {
-      display: flex;
-      align-items: center;
-    }
-    
-    .page-title h1 {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-    
-    .page-title .separator {
-      color: var(--text-muted);
-      margin: 0 0.5rem;
-    }
-    
-    .page-title h2 {
-      font-size: 1rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-    }
-    
-    /* 标签页 */
-    .tabs {
-      display: flex;
-      padding: 0 1.5rem;
-      border-bottom: 1px solid var(--border-color);
-      background-color: var(--bg-secondary);
-    }
-    
-    .tab {
-      padding: 1rem 1.25rem;
-      font-size: 0.9375rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      cursor: pointer;
-      position: relative;
-      transition: var(--transition);
-    }
-    
-    .tab:hover {
-      color: var(--text-primary);
-    }
-    
-    .tab.active {
-      color: var(--text-primary);
-    }
-    
-    .tab.active::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background-color: var(--accent-color);
-      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-    }
-    
-    /* 内容区域 */
-    .tab-content {
-      flex: 1;
-      overflow: auto;
-      padding: 1.5rem;
-      background-color: var(--bg-primary);
-    }
-    
-    /* 主页面的样式 */
-    .home-container {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 2rem;
-    }
-    
-    .home-title {
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-    }
-    
-    .home-title span.accent {
-      color: var(--accent-color);
-    }
-    
-    .home-subtitle {
-      font-size: 1.25rem;
-      color: var(--text-secondary);
-      margin-bottom: 3rem;
-    }
-    
-    .search-container {
-      margin: 2rem auto;
-      max-width: 800px;
-      width: 100%;
-      position: relative;
-    }
-    
-    .model-dropdown {
-      position: absolute;
-      left: 0;
-      top: -40px;
-    }
-    
-    .model-dropdown select {
-      background-color: var(--bg-tertiary);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      padding: 0.5rem 2rem 0.5rem 0.75rem;
-      font-size: 0.875rem;
-      cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239DA2AE'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.5rem center;
-      background-size: 1.25rem;
-    }
-    
-    .model-dropdown select:focus {
-      outline: none;
-      border-color: var(--accent-color);
-    }
-    
-    .search-box {
-      position: relative;
-    }
-    
-    .search-input {
-      background-color: var(--bg-tertiary);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      padding: 1rem 1rem 1rem 3rem;
-      width: 100%;
-      font-size: 1rem;
-    }
-    
-    .search-input:focus {
-      outline: none;
-      border-color: var(--accent-color);
-    }
-    
-    .search-icon {
-      position: absolute;
-      left: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-secondary);
-      font-size: 1.25rem;
-    }
-    
-    .suggestion-container {
-      margin-top: 2rem;
-      width: 100%;
-      max-width: 800px;
-    }
-    
-    .suggestion-title {
-      font-size: 1rem;
-      color: var(--text-secondary);
-      margin-bottom: 1rem;
-      text-align: left;
-    }
-    
-    .suggestion-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      width: 100%;
-    }
-    
-    .suggestion-item {
-      background-color: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      padding: 1rem 1.5rem;
-      cursor: pointer;
-      transition: var(--transition);
-      text-align: left;
-      display: flex;
-      align-items: center;
-    }
-    
-    .suggestion-item:hover {
-      background-color: rgba(252, 60, 95, 0.1);
-      border-color: var(--accent-color);
-    }
-    
-    .suggestion-item i {
-      color: var(--accent-color);
-      margin-right: 1rem;
-    }
-    
-    .suggestion-text {
-      font-size: 0.9375rem;
-      color: var(--text-primary);
-    }
-    
-    /* 动画和效果 */
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    .fadeIn {
-      animation: fadeIn 0.3s ease-in-out;
-    }
-    
-    /* 适配不同屏幕尺寸 */
-    @media (max-width: 768px) {
-      .sidebar:not(.collapsed) {
-        width: 220px;
-      }
-    }
-    
-    @media (max-width: 640px) {
-      .app-container {
-        flex-direction: column;
-      }
-      
-      .sidebar:not(.collapsed) {
-        width: 100%;
-        height: auto;
-        max-height: 50vh;
-        overflow-y: auto;
-      }
-      
-      .main-content {
-        height: 50vh;
-      }
-    }
-  </style>
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="app-container">
-    <!-- 侧边栏 -->
+    <!-- Sidebar -->
     <aside class="sidebar">
       <button class="toggle-sidebar" id="toggleSidebar">
         <i class="fas fa-chevron-left"></i>
@@ -629,7 +37,7 @@
         <div class="projects-header">My Research Projects</div>
         
         <ul class="project-list">
-          <!-- 项目1：细胞分割 -->
+          <!-- Project 1: Cell Segmentation -->
           <li class="project-item active expanded">
             <button class="project-button">
               <div class="project-icon">
@@ -641,37 +49,37 @@
             
             <ul class="project-children" style="max-height: 500px;">
               <li class="project-child">
-                <button class="child-button">
+                <button class="child-button" data-tab="chat">
                   <i class="fas fa-comments"></i>
                   <span>General Chat</span>
                 </button>
               </li>
               <li class="project-child">
-                <button class="child-button active">
+                <button class="child-button active" data-tab="literature">
                   <i class="fas fa-book-open"></i>
                   <span>Literature Review</span>
                 </button>
               </li>
               <li class="project-child">
-                <button class="child-button">
+                <button class="child-button" data-tab="proposal">
                   <i class="fas fa-file-alt"></i>
                   <span>Proposal</span>
                 </button>
               </li>
               <li class="project-child">
-                <button class="child-button">
+                <button class="child-button" data-tab="experiment">
                   <i class="fas fa-flask"></i>
                   <span>Experiment</span>
                 </button>
               </li>
               <li class="project-child">
-                <button class="child-button">
+                <button class="child-button" data-tab="manuscript">
                   <i class="fas fa-edit"></i>
                   <span>Manuscript</span>
                 </button>
               </li>
               <li class="project-child">
-                <button class="child-button">
+                <button class="child-button" data-tab="references">
                   <i class="fas fa-bookmark"></i>
                   <span>References</span>
                 </button>
@@ -679,7 +87,7 @@
             </ul>
           </li>
           
-          <!-- 项目2：蛋白质折叠 -->
+          <!-- Project 2: Protein Folding -->
           <li class="project-item">
             <button class="project-button">
               <div class="project-icon">
@@ -692,7 +100,7 @@
         </ul>
       </div>
       
-      <!-- 用户资料 -->
+      <!-- User Profile -->
       <div class="user-profile">
         <div class="avatar">P</div>
         <div class="user-info">
@@ -707,9 +115,9 @@
       </div>
     </aside>
     
-    <!-- 主内容区域 -->
+    <!-- Main Content -->
     <main class="main-content">
-      <!-- 标题栏 -->
+      <!-- Header -->
       <div class="content-header">
         <div class="page-title">
           <h1>Cell Segmentation</h1>
@@ -718,21 +126,21 @@
         </div>
       </div>
       
-      <!-- 标签页导航 -->
+      <!-- Tabs -->
       <div class="tabs">
-        <div class="tab active">Chat</div>
-        <div class="tab">References</div>
+        <div class="tab active" data-tab="home">Home</div>
+        <div class="tab" data-tab="references">References</div>
       </div>
       
-      <!-- 标签页内容 -->
+      <!-- Tab Content -->
       <div class="tab-content">
-        <!-- 主页内容 -->
-        <div class="home-container fadeIn">
+        <!-- Home Content -->
+        <div class="home-container fadeIn" data-tab-content="home">
           <h1 class="home-title">AI Scientists for <span class="accent">Scientific</span> Discovery</h1>
           <p class="home-subtitle">Explore research literature with intelligence and precision</p>
           
           <div class="search-container">
-            <!-- 模型选择下拉框 -->
+            <!-- Model Dropdown -->
             <div class="model-dropdown">
               <select id="modelSelect">
                 <option value="atlas">Atlas - Research Assistant</option>
@@ -742,14 +150,14 @@
               </select>
             </div>
             
-            <!-- 搜索框 -->
+            <!-- Search Box -->
             <div class="search-box">
               <i class="fas fa-search search-icon"></i>
               <input type="text" class="search-input" placeholder="Enter your research question here...">
             </div>
           </div>
           
-          <!-- 建议列表 -->
+          <!-- Suggestions -->
           <div class="suggestion-container">
             <div class="suggestion-title">Research Inspiration:</div>
             <div class="suggestion-list">
@@ -777,68 +185,8 @@
   </div>
 
   <!-- JavaScript -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // 侧边栏折叠/展开功能
-      const toggleBtn = document.getElementById('toggleSidebar');
-      const sidebar = document.querySelector('.sidebar');
-      const toggleIcon = toggleBtn.querySelector('i');
-      
-      toggleBtn.addEventListener('click', function() {
-        sidebar.classList.toggle('collapsed');
-        
-        if (sidebar.classList.contains('collapsed')) {
-          toggleIcon.classList.remove('fa-chevron-left');
-          toggleIcon.classList.add('fa-chevron-right');
-        } else {
-          toggleIcon.classList.remove('fa-chevron-right');
-          toggleIcon.classList.add('fa-chevron-left');
-        }
-      });
-      
-      // 项目展开/折叠功能
-      const projectButtons = document.querySelectorAll('.project-button');
-      
-      projectButtons.forEach(button => {
-        button.addEventListener('click', function() {
-          const projectItem = this.closest('.project-item');
-          const isExpanded = projectItem.classList.contains('expanded');
-          const arrow = this.querySelector('.project-arrow');
-          
-          if (isExpanded) {
-            projectItem.classList.remove('expanded');
-            arrow.classList.remove('fa-chevron-down');
-            arrow.classList.add('fa-chevron-right');
-          } else {
-            projectItem.classList.add('expanded');
-            arrow.classList.remove('fa-chevron-right');
-            arrow.classList.add('fa-chevron-down');
-          }
-        });
-      });
-      
-      // 标签页切换功能
-      const tabs = document.querySelectorAll('.tab');
-      
-      tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-          tabs.forEach(t => t.classList.remove('active'));
-          this.classList.add('active');
-        });
-      });
-      
-      // 将研究灵感项目添加到搜索框
-      const suggestionItems = document.querySelectorAll('.suggestion-item');
-      const searchInput = document.querySelector('.search-input');
-      
-      suggestionItems.forEach(item => {
-        item.addEventListener('click', function() {
-          const text = this.querySelector('.suggestion-text').textContent;
-          searchInput.value = text;
-          searchInput.focus();
-        });
-      });
-    });
-  </script>
+  <script src="js/services/chatService.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
