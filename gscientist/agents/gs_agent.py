@@ -1,92 +1,109 @@
-import os
-import yaml
-from camel.agents import ChatAgent
-from camel.messages import BaseMessage
-from camel.models import ModelFactory
-from camel.types import ModelPlatformType, ModelType
-from gscientist.agents.base_agent import BaseAgent
+import os  
+import yaml  
+import asyncio  
+from typing import AsyncGenerator, Any, Optional  
 
-class GSAgent(ChatAgent, BaseAgent):
-    def __init__(self, name='GSAgent', llm_config=None, tools=None):
-        BaseAgent.__init__(self, name)
-        """Initialize a GSAgent instance.
+from sciagents.agents.chat_agent import ChatAgent
+from sciagents.agents.message import AgentInput, Message, Role, AgentOutput
+from sciagents.tools import function_tool
 
-        Args:
-            name (str): Name of the agent
-            llm_config (dict): Configuration dictionary containing:
-                - model_platform: Platform type (e.g., openai, azure, etc.)
-                - model_type: Model type (e.g., gpt-4, glm-4, etc.)
-                - api_key: API key for the platform
-                - model_config_dict: Additional model configuration (e.g., temperature, max_tokens, etc.)
-        """
+from gscientist.agents.base_agent import BaseAgent  
+  
+class GSAgent(ChatAgent, BaseAgent):  
+    def __init__(self, name='GSAgent', llm_config=None, tools=None):  
+        BaseAgent.__init__(self, name, llm_config)  
 
-        self.type = "GSAgent"
-
-        llm_config = llm_config['agents'].get(self.type)
-
-        # Ensure required keys are present in the configuration
-        required_keys = ["model_platform", "model_type", "api_key"]
-        for key in required_keys:
-            if key not in llm_config:
-                raise ValueError(f"Missing required configuration key: {key}")
-
-        # Create system message for assistant role
-        sys_msg = BaseMessage.make_assistant_message(
-            role_name=name,
-            content="You are a helpful AI research assistant."
-        )
-        
-        # Dynamically initialize the model based on llm_config
-        model = ModelFactory.create(
-            model_platform=ModelPlatformType(llm_config["model_platform"]),
-            model_type=ModelType(llm_config["model_type"]),
-            api_key=llm_config["api_key"],
-            url=llm_config["url"],
-            model_config_dict=llm_config["model_config_dict"]
-        )
-        
-        ChatAgent.__init__(
-            self,
-            system_message=sys_msg,
-            model=model,
+        # 初始化 Agent 类  
+        ChatAgent.__init__(  
+            self,  
+            name=name,  
+            llm_config=llm_config,
             tools=tools,
-            message_window_size=10  # Maintain conversation history window
-        )
+        )  
+          
+        # 初始化状态  
+        self.state = {}  
+  
+    def log(self, message):  
+        """简单的日志记录方法"""  
+        print(f"[{self.name}] {message}")  
+  
+    def reset(self):  
+        """重置代理到初始状态"""  
+        self.log("Resetting ChatAgent...")  
+        self.state.clear()  
+        # 在这里添加任何其他需要重置的状态  
+  
+if __name__ == "__main__":  
+    # 加载 YAML 配置文件  
+    with open(os.path.join("config", "config.yml"), "r") as f:  
+        config = yaml.safe_load(f)  
+  
 
-    def reset(self):
-        self.log("Resetting GSAgent...")
-        self.state.clear()
+    llm_config = config['agents'].get('GSAgent')  
+    llm_config={
+        "model": llm_config["model"],
+        "api_key": llm_config["api_key"],
+        "api_base": llm_config["url"],
+        **llm_config.get("model_config_dict", {})
+    }
 
-    def step(self, input_data: str) -> str:
-        self.log(f"Processing input: {input_data}")
-        user_msg = BaseMessage.make_user_message(
-            role_name="User",
-            content=input_data
-        )
-        response = ChatAgent.step(self, user_msg)
-        return response.msgs[0].content
+    # 创建代理  
+    agent = GSAgent('GSAgent', llm_config)  
+      
+    # 示例 1: 非流式输出  
+    print("\n=== 非流式输出 ===")  
+    output = agent.step("帮我写一个python读取图片的代码，谢谢.", stream=False)  
+    print(output)  
 
-    async def a_step(self, input_data: str) -> str:
-        """异步处理输入消息并返回字符串响应"""
-        return ""
+    # 示例 2: 流式输出
+    output = agent.step("帮我写一个python读取图片的代码，谢谢.", stream=True)  
+    print("\n=== 流式输出 ===")
+    if hasattr(output.content, "__iter__") and not isinstance(output.content, str):
+        # 是生成器，逐步打印
+        for chunk in output.content:
+            print(chunk, end="", flush=True)
+        print()
+    else:
+        # 是字符串，直接打印
+        print(output.content)
+      
+    # 示例 2: 异步示例  
+    async def run_async_examples():  
+        try:  
+            # 异步流式输出  
+            print("\n=== 异步流式输出 ===")  
+            output = await agent.a_step("帮我写一个python读取图片的代码，谢谢.", stream=True)  
+            if hasattr(output.content, "__aiter__"):  # 检查是否为异步生成器
+                async for chunk in output.content:
+                    print(chunk, end="", flush=True)
+                print()
+            elif hasattr(output.content, "__iter__") and not isinstance(output.content, str):
+                for chunk in output.content:
+                    print(chunk, end="", flush=True)
+                print()
+            else:
+                print(output.content)
 
-    async def stream_step(self, input_data: str):
-        """流式处理输入消息并返回响应片段"""
-        return ""
 
-    def reset(self):
-        self.log("Resetting GSAgent...")
-        self.state.clear()
-        
+            # 异步非流式输出  
+            print("\n=== 异步非流式输出 ===")  
+            output = await agent.a_step("帮我写一个python读取图片的代码，谢谢.", stream=False)  
+            if hasattr(output.content, "__aiter__"):  # 检查是否为异步生成器
+                async for chunk in output.content:
+                    print(chunk, end="", flush=True)
+                print()
+            elif hasattr(output.content, "__iter__") and not isinstance(output.content, str):
+                for chunk in output.content:
+                    print(chunk, end="", flush=True)
+                print()
+            else:
+                print(output.content)
 
-if __name__ == "__main__":
-    # Load YAML configuration file
-    with open(os.path.join("config", "config.yml"), "r") as f:
-        config = yaml.safe_load(f)
 
 
-    agent = GSAgent('GSAgent', config)
-    
-    # Get response
-    response = agent.step("Give me investment suggestion in 3 bullet points.")
-    print(response)
+        except Exception as e:  
+            print(f"Error in async examples: {str(e)}")  
+      
+    # 运行异步示例  
+    asyncio.run(run_async_examples())

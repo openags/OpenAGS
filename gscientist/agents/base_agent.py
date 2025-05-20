@@ -1,52 +1,73 @@
 from abc import ABC, abstractmethod
 import asyncio
-from typing import Union, Generator, AsyncGenerator, Dict, Any, Optional
+from typing import List, Union, Generator, AsyncGenerator, Dict, Any, Optional
+from sciagents.llm import LlmModel, LlmConfig
+from sciagents.agents.message import AgentInput, AgentOutput
 
 class BaseAgent(ABC):
     """
     A base class for all agents. Defines common interfaces and behaviors.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, llm_config: Union[LlmConfig, Dict[str, Any]]) -> None:
+        """
+        Initialize the agent with a name and LLM configuration.
+
+        Args:
+            name: Name of the agent.
+            llm_config: Either an LlmConfig instance or a dict containing configuration parameters
+                       (including 'model', 'api_key', etc.). See LlmConfig for details.
+        """
         self.name = name
-        self.state = {}
+        if isinstance(llm_config, dict):
+            try:
+                self.llm_config = LlmConfig(**llm_config)
+            except Exception as e:
+                raise ValueError(f"Invalid llm_config: {e}")
+        else:
+            self.llm_config = llm_config
+        self.llm_model = LlmModel(config=self.llm_config)
 
     @abstractmethod
-    def reset(self):
-        """Reset the agent to its initial state."""
-        pass
-
-    @abstractmethod
-    def step(self, input_data) -> Any:
+    def run(self, *args: Any, **kwargs: Any) -> Any:
         """
-        Perform a single step of interaction with the agent.
-        Returns the complete response (non-streaming).
-        """
-        pass
-
-    @abstractmethod
-    async def a_step(self, input_data) -> Any:
-        """
-        Async version of step that returns the complete response.
+        Run the agent with the given arguments.
         """
         pass
 
     @abstractmethod
-    async def stream_step(self, input_data) -> AsyncGenerator[str, None]:
+    def reset(self) -> None:
         """
-        Stream the agent's response one token/chunk at a time.
-        Returns an async generator that yields response fragments.
+        Reset the agent to its initial state.
         """
         pass
 
-    def log(self, message: str):
-        """Log a message for debugging or tracking purposes."""
-        print(f"[{self.name}] {message}")
+    @abstractmethod
+    def step(self, input_data: Union[AgentInput, List[Dict], str], stream: bool = False, *args: Any, **kwargs: Any) -> AgentOutput:
+        """
+        Perform a single step of the agent's operation.
 
-    def update_state(self, key: str, value):
-        """Update the internal state of the agent."""
-        self.state[key] = value
+        Args:
+            input_data: Input messages as AgentInput or list of dictionaries.
+            stream: Whether to enable streaming output, defaults to False.
+            *args, **kwargs: Additional arguments for flexibility.
 
-    def get_state(self, key: str):
-        """Retrieve a value from the agent's state."""
-        return self.state.get(key)
+        Returns:
+            AgentOutput: Contains response content (str or Generator) and optional metadata.
+        """
+        pass
+
+    @abstractmethod
+    async def a_step(self, input_data: Union[AgentInput, List[Dict], str], stream: bool = False, *args: Any, **kwargs: Any) -> AgentOutput:
+        """
+        Perform a single step of the agent's operation asynchronously.
+
+        Args:
+            input_data: Input messages as AgentInput or list of dictionaries.
+            stream: Whether to enable streaming output, defaults to False.
+            *args, **kwargs: Additional arguments for flexibility.
+
+        Returns:
+            AgentOutput: Contains response content (str or AsyncGenerator) and optional metadata.
+        """
+        pass

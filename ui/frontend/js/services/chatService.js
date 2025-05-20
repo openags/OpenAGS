@@ -1,42 +1,87 @@
 // ui/frontend/js/services/chatService.js
 class ChatService {
     constructor(baseUrl = 'http://localhost:8000') {
-      this.baseUrl = baseUrl;
+        this.baseUrl = baseUrl;
     }
-  
-    async streamChat(message, agentType = 'ChatAgent', onMessage, onError) {
-      try {
-        const response = await fetch(`${this.baseUrl}/chat/${agentType}/stream`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message })
-        });
-  
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-  
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const content = line.slice(5).trim();
-              if (content && content !== '[DONE]') {
-                onMessage(content);
-              }
+
+    async chat(message, agentType = 'ChatAgent', { stream = false } = {}, onMessage, onError) {
+        console.log('[ChatService.chat] URL:', `${this.baseUrl}/agents/chat/${agentType}`);
+        console.log('[ChatService.chat] Params:', { message, agentType, stream });
+        try {
+            const response = await fetch(`${this.baseUrl}/agents/chat/${agentType}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    message,
+                    options: { stream }
+                })
+            });
+
+            if (stream) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    if (chunk && onMessage) onMessage(chunk);
+                }
+            } else {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                return data.message;
             }
-          }
+        } catch (error) {
+            console.error('[ChatService.chat] Error:', error);
+            if (onError) onError(error);
+            else throw error;
         }
-      } catch (error) {
-        onError(error);
-      }
     }
-  }
-  
-  export default new ChatService();
+
+    async aChat(message, agentType = 'ChatAgent', { stream = true, signal = null } = {}, onMessage, onError) {
+        console.log('[ChatService.aChat] URL:', `${this.baseUrl}/agents/chat/${agentType}/async`);
+        try {
+            const response = await fetch(`${this.baseUrl}/agents/chat/${agentType}/async`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                signal,
+                body: JSON.stringify({ 
+                    message,
+                    options: { stream }
+                })
+            });
+
+            if (stream) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                try {
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        const chunk = decoder.decode(value, { stream: true });
+                        if (chunk && onMessage) onMessage(chunk);
+                    }
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        reader.cancel();
+                        throw err;
+                    }
+                }
+            } else {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                return data.message;
+            }
+        } catch (error) {
+            console.error('[ChatService.aChat] Error:', error);
+            if (onError) onError(error);
+            else throw error;
+        }
+    }
+}
+
+export default new ChatService();

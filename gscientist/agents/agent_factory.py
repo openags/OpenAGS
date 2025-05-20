@@ -47,8 +47,14 @@ class AgentFactory:
 
         try:
             agent_class = self.agent_classes[agent_type]
-            # 创建代理实例，传递整个配置
-            agent = agent_class(name=f"{agent_type}Agent", llm_config=config)
+            # 只取该 agent 的 llm_config
+            agent_config = config.get('agents', {}).get(agent_type, {})
+            # 兼容 deepseek 的 api_base 字段
+            if 'url' in agent_config:
+                agent_config['api_base'] = agent_config['url']
+            if 'model_config_dict' in agent_config:
+                agent_config.update(agent_config['model_config_dict'])
+            agent = agent_class(name=f"{agent_type}Agent", llm_config=agent_config)
             return agent
         except Exception as e:
             logger.error(f"Failed to create agent of type {agent_type}: {str(e)}")

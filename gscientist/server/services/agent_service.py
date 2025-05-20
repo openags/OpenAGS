@@ -1,11 +1,11 @@
-# gscientist/server/services.py
 import yaml
 import os
 import logging
-from typing import Dict, AsyncGenerator, Any
+from typing import Dict, AsyncGenerator, Any, Union
 
 from gscientist.agents.agent_factory import AgentFactory
 from gscientist.server.models import ChatRequest
+from sciagents.agents.message import AgentOutput
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class AgentService:
 
     def _get_agent(self, agent_type: str):
         """获取代理实例"""
-        if agent_type not in self.get_agent_types():
+        if (agent_type not in self.get_agent_types()):
             raise ValueError(f"Unknown agent type: {agent_type}")
         
         # 如果已经创建了代理实例，则返回
@@ -55,36 +55,30 @@ class AgentService:
             logger.error(f"Failed to create agent of type {agent_type}: {e}")
             raise
 
-    def process_request(self, agent_type: str, request: ChatRequest) -> str:
-        """处理同步请求"""
-        logger.info(f"Processing synchronous request for agent type: {agent_type}")
+    def get_agent(self, agent_type: str):
+        """对外暴露获取代理实例的方法"""
+        return self._get_agent(agent_type)
+
+    def process_request(self, agent_type: str, request: ChatRequest) -> Union[str, AgentOutput]:
+        """处理同步请求，支持流式和非流式输出"""
+        logger.info(f"Processing request for agent type: {agent_type}")
         try:
             agent = self._get_agent(agent_type)
-            response = agent.step(request.message)
-            return response
+            stream = request.options.get('stream', False) if request.options else False
+            response = agent.step(request.message, stream=stream)
+            return response.content if isinstance(response, AgentOutput) else response
         except Exception as e:
-            logger.error(f"Error processing synchronous request: {str(e)}")
+            logger.error(f"Error processing request: {str(e)}")
             raise
 
-    async def process_request_async(self, agent_type: str, request: ChatRequest) -> str:
-        """处理异步请求"""
-        logger.info(f"Processing asynchronous request for agent type: {agent_type}")
+    async def process_request_async(self, agent_type: str, request: ChatRequest) -> Union[str, AgentOutput]:
+        """处理异步请求，支持流式和非流式输出"""
+        logger.info(f"Processing async request for agent type: {agent_type}")
         try:
             agent = self._get_agent(agent_type)
-            response = await agent.a_step(request.message)
-            return response
+            stream = request.options.get('stream', False) if request.options else False
+            response = await agent.a_step(request.message, stream=stream)
+            return response.content if isinstance(response, AgentOutput) else response
         except Exception as e:
-            logger.error(f"Error processing asynchronous request: {str(e)}")
-            raise
-
-    async def stream_response(self, agent_type: str, request: ChatRequest) -> AsyncGenerator[str, None]:
-        """处理流式请求"""
-        logger.info(f"Processing streaming request for agent type: {agent_type}")
-        try:
-            agent = self._get_agent(agent_type)
-            async for chunk in agent.stream_step(request.message):
-                if chunk:
-                    yield chunk
-        except Exception as e:
-            logger.error(f"Error processing streaming request: {str(e)}")
+            logger.error(f"Error processing async request: {str(e)}")
             raise

@@ -1,5 +1,5 @@
 import asyncio
-from gscientist.agents.gs_agent import GSAgent
+from gscientist.agents.camel_agent import GSAgent
 from gscientist.tools.builtins.paper_search.arxiv import ArxivSearcher
 import os
 import yaml

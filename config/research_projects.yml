@@ -1,0 +1,35 @@
+projects:
+- name: Default
+  path: C:\Users\ps\Documents\AutoResearch_Workspace\Default
+  created_date: '2025-05-21'
+  status: active
+  description: Default project automatically created.
+  structure:
+    references:
+      path: ./References
+      database: ./References/references.db
+    literature_review:
+      path: ./Literature_Review
+    proposal:
+      path: ./Proposal
+    experiment:
+      path: ./Experiment
+    manuscript:
+      path: ./Manuscript
+- name: AGS
+  path: C:\Users\ps\Documents\AutoResearch_Workspace\AGS
+  created_date: '2025-05-21'
+  status: active
+  description: ''
+  structure:
+    references:
+      path: ./References
+      database: ./References/references.db
+    literature_review:
+      path: ./Literature_Review
+    proposal:
+      path: ./Proposal
+    experiment:
+      path: ./Experiment
+    manuscript:
+      path: ./Manuscript

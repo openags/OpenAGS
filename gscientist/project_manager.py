@@ -1,231 +1,152 @@
 import os
 import shutil
-import sqlite3
+import yaml
 from pathlib import Path
 from typing import Dict, List, Optional
-
+from datetime import datetime
 
 class ProjectManager:
-    def __init__(self, base_path: Optional[str] = None):
-        """Initialize the ProjectManager with a database and base path.
-
-        Args:
-            base_path (str, optional): Base directory for projects. Defaults to user's Documents folder.
-        """
-        self.db_path = "research_projects.db"
-        if base_path is None:
-            # Default to user's Documents/Research Projects directory
-            self.base_path = os.path.join(Path.home(), "Documents", "Research Projects")
+    def __init__(self, base_path: Optional[str] = None, config_dir: Optional[str] = None):
+        """ProjectManager using YAML for project management."""
+        # Set config directory
+        if config_dir is None:
+            self.config_dir = Path(__file__).parent.parent / "config"
         else:
-            self.base_path = base_path
+            self.config_dir = Path(config_dir)
+        self.config_dir.mkdir(exist_ok=True)
+        self.projects_file = self.config_dir / "research_projects.yml"
+        # If the file does not exist, create an empty YAML file
+        if not self.projects_file.exists():
+            with open(self.projects_file, 'w', encoding='utf-8') as f:
+                yaml.dump({"projects": []}, f, sort_keys=False, allow_unicode=True)
+        # Set workspace path
+        if base_path is None:
+            self.base_path = Path.home() / "Documents" / "AutoResearch_Workspace"
+        else:
+            self.base_path = Path(base_path)
+        self.base_path.mkdir(parents=True, exist_ok=True)
 
-        # Ensure the base directory exists
-        os.makedirs(self.base_path, exist_ok=True)
-        self._create_database()
+        self._init_projects_config()
 
-    def _create_database(self):
-        """Create the SQLite database and required tables."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+    def _init_projects_config(self):
+        if not self.projects_file.exists():
+            # If file does not exist, create with a Default project
+            default_project = {
+                "name": "Default",
+                "path": str(self.base_path / "Default"),
+                "created_date": datetime.now().strftime("%Y-%m-%d"),
+                "status": "active",
+                "description": "Default project automatically created.",
+                "structure": {
+                    "references": {"path": "./References", "database": "./References/references.db"},
+                    "literature_review": {"path": "./Literature_Review"},
+                    "proposal": {"path": "./Proposal"},
+                    "experiment": {"path": "./Experiment"},
+                    "manuscript": {"path": "./Manuscript"}
+                }
+            }
+            (self.base_path / "Default").mkdir(exist_ok=True)
+            for folder in ["References", "Literature_Review", "Proposal", "Experiment", "Manuscript"]:
+                (self.base_path / "Default" / folder).mkdir(exist_ok=True)
+            config = {"projects": [default_project]}
+            self._save_projects_config(config)
+        else:
+            with open(self.projects_file, 'r', encoding='utf-8') as f:
+                self.projects_config = yaml.safe_load(f)
+            # If file exists but projects is empty or None, add Default project
+            if not self.projects_config or not self.projects_config.get("projects"):
+                default_project = {
+                    "name": "Default",
+                    "path": str(self.base_path / "Default"),
+                    "created_date": datetime.now().strftime("%Y-%m-%d"),
+                    "status": "active",
+                    "description": "Default project automatically created.",
+                    "structure": {
+                        "references": {"path": "./References", "database": "./References/references.db"},
+                        "literature_review": {"path": "./Literature_Review"},
+                        "proposal": {"path": "./Proposal"},
+                        "experiment": {"path": "./Experiment"},
+                        "manuscript": {"path": "./Manuscript"}
+                    }
+                }
+                (self.base_path / "Default").mkdir(exist_ok=True)
+                for folder in ["References", "Literature_Review", "Proposal", "Experiment", "Manuscript"]:
+                    (self.base_path / "Default" / folder).mkdir(exist_ok=True)
+                self.projects_config = {"projects": [default_project]}
+                self._save_projects_config(self.projects_config)
 
-        # Create projects table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS projects (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                path TEXT NOT NULL,
-                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
+    def _save_projects_config(self, config):
+        with open(self.projects_file, 'w', encoding='utf-8') as f:
+            yaml.dump(config, f, sort_keys=False, allow_unicode=True)
+        self.projects_config = config
 
-        # Create folders table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS folders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER,
-                parent_id INTEGER,
-                name TEXT NOT NULL,
-                folder_type TEXT NOT NULL,
-                path TEXT NOT NULL,
-                FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
-            )
-        ''')
-
-        conn.commit()
-        conn.close()
-
-    def create_project(self, project_name: str) -> int:
-        """Create a new research project.
-
-        Args:
-            project_name (str): Name of the project.
-
-        Returns:
-            int: The ID of the created project.
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        # Create project directory
-        project_path = os.path.join(self.base_path, project_name)
-        os.makedirs(project_path, exist_ok=True)
-
-        # Insert project into database
-        cursor.execute("INSERT INTO projects (name, path) VALUES (?, ?)", (project_name, project_path))
-        project_id = cursor.lastrowid
-
-        # Create default folders
-        default_folders = {
-            "Literature Review": ["References"],
-            "Proposal": [],
-            "Experiment": [],
-            "Manuscript": []
+    def create_project(self, project_name: str, description: str = "") -> str:
+        """Create a new research project and update YAML config."""
+        project_path = self.base_path / project_name
+        project_path.mkdir(exist_ok=True)
+        # Standard folders
+        folders = ["References", "Literature_Review", "Proposal", "Experiment", "Manuscript"]
+        for folder in folders:
+            (project_path / folder).mkdir(exist_ok=True)
+        # Project config
+        project_config = {
+            "name": project_name,
+            "path": str(project_path),
+            "created_date": datetime.now().strftime("%Y-%m-%d"),
+            "status": "active",
+            "description": description,
+            "structure": {
+                "references": {"path": "./References", "database": "./References/references.db"},
+                "literature_review": {"path": "./Literature_Review"},
+                "proposal": {"path": "./Proposal"},
+                "experiment": {"path": "./Experiment"},
+                "manuscript": {"path": "./Manuscript"}
+            }
         }
+        self.projects_config["projects"].append(project_config)
+        self._save_projects_config(self.projects_config)
+        return project_name
 
-        for folder_name, subfolders in default_folders.items():
-            folder_path = os.path.join(project_path, folder_name)
-            os.makedirs(folder_path, exist_ok=True)
+    def rename_project(self, name: str, new_name: str):
+        """Rename a project and update YAML config."""
+        for project in self.projects_config["projects"]:
+            if project["name"] == name:
+                old_path = Path(project["path"])
+                new_path = old_path.parent / new_name
+                if old_path.exists():
+                    os.rename(old_path, new_path)
+                project["name"] = new_name
+                project["path"] = str(new_path)
+                self._save_projects_config(self.projects_config)
+                return
+        raise ValueError("Project not found")
 
-            cursor.execute(
-                "INSERT INTO folders (project_id, parent_id, name, folder_type, path) VALUES (?, NULL, ?, 'default', ?)",
-                (project_id, folder_name, folder_path)
-            )
-            folder_id = cursor.lastrowid
-
-            # Create subfolders
-            for subfolder in subfolders:
-                subfolder_path = os.path.join(folder_path, subfolder)
-                os.makedirs(subfolder_path, exist_ok=True)
-                cursor.execute(
-                    "INSERT INTO folders (project_id, parent_id, name, folder_type, path) VALUES (?, ?, ?, 'default', ?)",
-                    (project_id, folder_id, subfolder, subfolder_path)
-                )
-
-        conn.commit()
-        conn.close()
-        return project_id
-
-    def rename_project(self, project_id: int, new_name: str):
-        """Rename an existing project.
-
-        Args:
-            project_id (int): ID of the project to rename.
-            new_name (str): New name for the project.
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        # Get old project info
-        cursor.execute("SELECT name, path FROM projects WHERE id=?", (project_id,))
-        old_name, old_path = cursor.fetchone()
-
-        # Calculate new path
-        new_path = os.path.join(os.path.dirname(old_path), new_name)
-
-        # Rename directory
-        if os.path.exists(old_path):
-            os.rename(old_path, new_path)
-
-        # Update database
-        cursor.execute("UPDATE projects SET name=?, path=? WHERE id=?", (new_name, new_path, project_id))
-
-        # Update paths in folders table
-        cursor.execute("SELECT id, path FROM folders WHERE project_id=?", (project_id,))
-        folders = cursor.fetchall()
-        for folder_id, folder_path in folders:
-            new_folder_path = folder_path.replace(old_path, new_path)
-            cursor.execute("UPDATE folders SET path=? WHERE id=?", (new_folder_path, folder_id))
-
-        conn.commit()
-        conn.close()
-
-    def delete_project(self, project_id: int):
-        """Delete a project and its associated files.
-
-        Args:
-            project_id (int): ID of the project to delete.
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        # Get project path
-        cursor.execute("SELECT path FROM projects WHERE id=?", (project_id,))
-        project_path = cursor.fetchone()[0]
-
-        # Delete project directory
-        if os.path.exists(project_path):
-            shutil.rmtree(project_path)
-
-        # Delete from database (folders will be deleted due to CASCADE)
-        cursor.execute("DELETE FROM projects WHERE id=?", (project_id,))
-
-        conn.commit()
-        conn.close()
+    def delete_project(self, name: str):
+        """Delete a project and update YAML config."""
+        for i, project in enumerate(self.projects_config["projects"]):
+            if project["name"] == name:
+                project_path = Path(project["path"])
+                if project_path.exists():
+                    shutil.rmtree(project_path)
+                del self.projects_config["projects"][i]
+                self._save_projects_config(self.projects_config)
+                return
+        raise ValueError("Project not found")
 
     def list_projects(self) -> List[Dict[str, str]]:
-        """List all projects.
+        """List all projects from YAML config."""
+        return self.projects_config.get("projects", [])
 
-        Returns:
-            List[Dict[str, str]]: A list of projects with their ID, name, and path.
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT id, name, path FROM projects")
-        projects = [{"id": row[0], "name": row[1], "path": row[2]} for row in cursor.fetchall()]
-
-        conn.close()
-        return projects
-
-    def get_project(self, project_id: int) -> Optional[Dict[str, str]]:
-        """Get details of a specific project.
-
-        Args:
-            project_id (int): ID of the project.
-
-        Returns:
-            Optional[Dict[str, str]]: Project details or None if not found.
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT id, name, path FROM projects WHERE id=?", (project_id,))
-        row = cursor.fetchone()
-
-        conn.close()
-        if row:
-            return {"id": row[0], "name": row[1], "path": row[2]}
+    def get_project(self, name: str) -> Optional[Dict[str, str]]:
+        """Get details of a specific project from YAML config."""
+        for project in self.projects_config.get("projects", []):
+            if project["name"] == name:
+                return project
         return None
 
-    def get_project_structure(self, project_id: int) -> List[Dict]:
-        """Get the folder structure for a project.
-
-        Args:
-            project_id (int): ID of the project.
-
-        Returns:
-            List[Dict]: List of folders with their properties and relationships.
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT id, parent_id, name, folder_type, path 
-            FROM folders 
-            WHERE project_id=? 
-            ORDER BY parent_id NULLS FIRST, name
-        """, (project_id,))
-        
-        folders = [
-            {
-                "id": row[0],
-                "parent_id": row[1],
-                "name": row[2],
-                "folder_type": row[3],
-                "path": row[4]
-            }
-            for row in cursor.fetchall()
-        ]
-
-        conn.close()
-        return folders
+    def get_project_structure(self, name: str) -> Optional[Dict]:
+        """Get the folder structure for a project from YAML config."""
+        project = self.get_project(name)
+        if project:
+            return project.get("structure", {})
+        return None
