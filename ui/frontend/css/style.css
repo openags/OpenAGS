@@ -380,9 +380,8 @@ body {
 /* Tabs */
 .tabs {
   display: flex;
-  padding: 0 1.5rem;
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-secondary); /* Keep this */
+  margin-left: 2rem; /* Add this */
 }
 
 .tab {
@@ -406,7 +405,7 @@ body {
 .tab.active::after {
   content: '';
   position: absolute;
-  bottom: -1px;
+  bottom: 0px; /* Changed to 0px */
   left: 0;
   right: 0;
   height: 2px;
