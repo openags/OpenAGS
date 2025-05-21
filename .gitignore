@@ -167,3 +167,6 @@ cython_debug/
 /actions/
 /output.txt
 /config/config.yml
+.auto-coder/
+/actions/
+/output.txt
