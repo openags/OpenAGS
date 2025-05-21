@@ -1,6 +1,6 @@
 projects:
-- name: Default
-  path: C:\Users\ps\Documents\AutoResearch_Workspace\Default
+- name: Cell Segmentation
+  path: C:\Users\ps\Documents\AutoResearch_Workspace\Cell Segmentation
   created_date: '2025-05-21'
   status: active
   description: Default project automatically created.
