@@ -73,55 +73,84 @@
       
       <!-- Tabs -->
       <div class="tabs">
-        <div class="tab active" data-tab="home">Home</div>
         <div class="tab" data-tab="chat">Chat</div>
+        <div class="tab" data-tab="planner">Planner</div>
+        <div class="tab" data-tab="editor">Editor</div>
+        <div class="tab" data-tab="browser">Browser</div>
         <div class="tab" data-tab="references">References</div>
       </div>
       
       <!-- Tab Content -->
       <div class="tab-content">
-        <!-- Home Content -->
-        <div class="home-container fadeIn" data-tab-content="home">
-          <h1 class="home-title">AI Scientists for <span class="accent">Scientific</span> Discovery</h1>
-          <p class="home-subtitle">Explore research literature with intelligence and precision</p>
-          
-          <div class="search-container">
-            <!-- Model Dropdown -->
-            <div class="model-dropdown">
-              <select id="modelSelect">
-                <option value="atlas">Atlas - Research Assistant</option>
-                <option value="nova">Nova - Literature Expert</option>
-                <option value="quantum">Quantum - Deep Analysis</option>
-                <option value="horizon">Horizon - Comprehensive Review</option>
+        <!-- Chat Content -->
+        <div class="tab-pane" data-tab-content="chat">
+          <div class="chat-container">
+            <div class="chat-messages"></div>
+            <div class="chat-input-container">
+              <select class="chat-agent-select">
+                <option value="">Select Agent</option>
               </select>
-            </div>
-            
-            <!-- Search Box -->
-            <div class="search-box">
-              <i class="fas fa-search search-icon"></i>
-              <input type="text" class="search-input" placeholder="Enter your research question here...">
+              <input type="text" class="chat-input" placeholder="Type your message...">
+              <button class="chat-send" data-action="send">Send</button>
             </div>
           </div>
-          
-          <!-- Suggestions -->
-          <div class="suggestion-container">
-            <div class="suggestion-title">Research Inspiration:</div>
-            <div class="suggestion-list">
-              <div class="suggestion-item">
-                <i class="fas fa-arrow-right"></i>
-                <div class="suggestion-text">What are the latest advancements in deep learning methods for medical image segmentation?</div>
+        </div>
+
+        <!-- Planner Content -->
+        <div class="tab-pane" data-tab-content="planner">
+          <div class="planner-container">
+            <div class="task-tree"></div>
+            <div class="task-details">
+              <div class="task-info"></div>
+              <div class="task-progress"></div>
+              <div class="task-actions"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Editor Content -->
+        <div class="tab-pane" data-tab-content="editor">
+          <div class="editor-container">
+            <div class="file-explorer">
+              <div class="file-tree"></div>
+            </div>
+            <div class="editor-main">
+              <div class="editor-tabs"></div>
+              <div class="editor-content"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Browser Content -->
+        <div class="tab-pane" data-tab-content="browser">
+          <div class="browser-container">
+            <div class="browser-toolbar">
+              <input type="text" class="browser-url" placeholder="Enter URL">
+              <div class="browser-controls">
+                <button class="back-btn"><i class="fas fa-arrow-left"></i></button>
+                <button class="forward-btn"><i class="fas fa-arrow-right"></i></button>
+                <button class="refresh-btn"><i class="fas fa-sync"></i></button>
               </div>
-              <div class="suggestion-item">
-                <i class="fas fa-arrow-right"></i>
-                <div class="suggestion-text">Compare the efficacy of different CRISPR-Cas9 delivery methods for gene editing in human cells</div>
-              </div>
-              <div class="suggestion-item">
-                <i class="fas fa-arrow-right"></i>
-                <div class="suggestion-text">Explore the relationship between gut microbiome composition and neurodegenerative disorders</div>
-              </div>
-              <div class="suggestion-item">
-                <i class="fas fa-arrow-right"></i>
-                <div class="suggestion-text">What methodologies are most effective for single-cell RNA sequencing data analysis?</div>
+            </div>
+            <div class="browser-content"></div>
+          </div>
+        </div>
+
+        <!-- References Content -->
+        <div class="tab-pane" data-tab-content="references">
+          <div class="references-container">
+            <div class="ref-toolbar">
+              <input type="text" class="ref-search" placeholder="Search references...">
+              <button class="add-ref-btn">
+                <i class="fas fa-plus"></i>
+                <span>Add Reference</span>
+              </button>
+            </div>
+            <div class="references-content">
+              <div class="ref-list"></div>
+              <div class="ref-details">
+                <h3>Select a reference to view details</h3>
+                <div class="ref-details-content"></div>
               </div>
             </div>
           </div>
