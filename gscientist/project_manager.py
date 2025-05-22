@@ -15,16 +15,26 @@ class ProjectManager:
             self.config_dir = Path(config_dir)
         self.config_dir.mkdir(exist_ok=True)
         self.projects_file = self.config_dir / "research_projects.yml"
-        # If the file does not exist, create an empty YAML file
-        if not self.projects_file.exists():
-            with open(self.projects_file, 'w', encoding='utf-8') as f:
-                yaml.dump({"projects": []}, f, sort_keys=False, allow_unicode=True)
-        # Set workspace path
+        
+        # Set workspace path and global configuration
         if base_path is None:
             self.base_path = Path.home() / "Documents" / "AutoResearch_Workspace"
         else:
             self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
+
+        # Global configuration
+        self.global_config = {
+            "workspace": {
+                "path": str(self.base_path),
+                "papers_database": str(self.base_path / "papers.db")
+            }
+        }
+
+        # If the file does not exist, create an empty YAML file with global config
+        if not self.projects_file.exists():
+            with open(self.projects_file, 'w', encoding='utf-8') as f:
+                yaml.dump({"global": self.global_config, "projects": []}, f, sort_keys=False, allow_unicode=True)
 
         self._init_projects_config()
 
@@ -76,9 +86,20 @@ class ProjectManager:
                 self._save_projects_config(self.projects_config)
 
     def _save_projects_config(self, config):
+        # Ensure the config has both global and projects sections
+        if isinstance(config, dict) and "projects" in config:
+            full_config = {
+                "global": self.global_config,
+                "projects": config["projects"]
+            }
+        else:
+            full_config = {
+                "global": self.global_config,
+                "projects": config
+            }
         with open(self.projects_file, 'w', encoding='utf-8') as f:
-            yaml.dump(config, f, sort_keys=False, allow_unicode=True)
-        self.projects_config = config
+            yaml.dump(full_config, f, sort_keys=False, allow_unicode=True)
+        self.projects_config = full_config
 
     def create_project(self, project_name: str, description: str = "") -> str:
         """Create a new research project and update YAML config."""

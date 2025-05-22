@@ -14,7 +14,7 @@ async function renderProjectList() {
         projects.forEach(project => {
             const li = document.createElement('li');
             li.className = 'project-item';
-            // 项目按钮
+            // Project button
             const btn = document.createElement('button');
             btn.className = 'project-button';
             btn.innerHTML = `
@@ -24,31 +24,31 @@ async function renderProjectList() {
                 </div>
                 <i class="fas fa-chevron-right project-arrow"></i>
             `;
-            // 展开/收起事件
+            // Expand/collapse event
             btn.addEventListener('click', () => {
                 const isExpanded = li.classList.contains('expanded');
                 li.classList.toggle('expanded');
                 const arrow = btn.querySelector('.project-arrow');
                 arrow.classList.toggle('fa-chevron-down', !isExpanded);
                 arrow.classList.toggle('fa-chevron-right', isExpanded);
-                // 切换子模块显示
+                // Toggle child module display
                 if (childrenUl) {
                     childrenUl.style.display = isExpanded ? 'none' : 'block';
                 }
-                // 设置主内容区标题
+                // Set main content area title
                 const projectTitle = document.getElementById('projectTitle');
                 if (projectTitle) projectTitle.textContent = project.name;
-                // 默认副标题
+                // Default subtitle
                 const projectSection = document.getElementById('projectSection');
                 if (projectSection) projectSection.textContent = 'Overview';
-                // 记录当前选中项目
+                // Save current selected project
                 localStorage.setItem('selectedProject', project.name);
-                // 自动切换到 Chat tab
+                // Auto switch to Chat tab
                 if (window.switchTab) window.switchTab('chat');
             });
             li.appendChild(btn);
 
-            // 子模块渲染（美观按钮+图标+顺序）
+            // Child module rendering (styled buttons + icons + order)
             let childrenUl = null;
             const childConfig = [
                 { key: 'chat', label: 'General Chat', icon: 'fa-comments', tab: 'chat' },
@@ -56,13 +56,13 @@ async function renderProjectList() {
                 { key: 'proposal', label: 'Proposal', icon: 'fa-file-alt', tab: 'proposal' },
                 { key: 'experiment', label: 'Experiment', icon: 'fa-flask', tab: 'experiment' },
                 { key: 'manuscript', label: 'Manuscript', icon: 'fa-edit', tab: 'manuscript' },
-                { key: 'references', label: 'References', icon: 'fa-bookmark', tab: 'references' },
+                { key: 'references', label: 'References', icon: 'fa-bookmark', tab: 'references' }
             ];
             if (project.structure && typeof project.structure === 'object') {
                 childrenUl = document.createElement('ul');
                 childrenUl.className = 'project-children';
                 childrenUl.style.display = 'none';
-                // 按顺序渲染已知子模块
+                // Render known child modules in order
                 childConfig.forEach(cfg => {
                     if (project.structure[cfg.key]) {
                         const childLi = document.createElement('li');
@@ -71,7 +71,7 @@ async function renderProjectList() {
                         btn.className = 'child-button';
                         btn.setAttribute('data-tab', cfg.tab);
                         btn.innerHTML = `<i class="fas ${cfg.icon}"></i><span>${cfg.label}</span>`;
-                        // 子模块点击时，更新副标题
+                        // Update subtitle when child module is clicked
                         btn.addEventListener('click', (e) => {
                             e.stopPropagation();
                             const projectSection = document.getElementById('projectSection');
@@ -81,7 +81,7 @@ async function renderProjectList() {
                         childrenUl.appendChild(childLi);
                     }
                 });
-                // 渲染未定义的其它子模块
+                // Render undefined child modules
                 for (const key in project.structure) {
                     if (!childConfig.some(cfg => cfg.key === key)) {
                         const childLi = document.createElement('li');
@@ -99,11 +99,11 @@ async function renderProjectList() {
             projectListEl.appendChild(li);
         });
     } catch (err) {
-        projectListEl.innerHTML = `<li>加载项目失败: ${err.message}</li>`;
+        projectListEl.innerHTML = `<li>Failed to load projects: ${err.message}</li>`;
     }
 }
 
-// 在 projectListEl 上添加事件委托
+// Add event delegation to projectListEl
 projectListEl.addEventListener('contextmenu', (e) => {
     const li = e.target.closest('.project-item');
     if (li) {
@@ -124,9 +124,9 @@ function showContextMenu(e, projectName) {
         <li class="delete">Delete</li>
     `;
     document.body.appendChild(contextMenuEl);
-    // 事件绑定
+    // Event binding
     contextMenuEl.querySelector('.rename').onclick = async () => {
-        const newName = prompt('输入新项目名', projectName);
+        const newName = prompt('Enter new project name', projectName);
         if (newName && newName !== projectName) {
             await ProjectService.renameProject(projectName, newName);
             renderProjectList();
@@ -134,12 +134,12 @@ function showContextMenu(e, projectName) {
         removeContextMenu();
     };
     contextMenuEl.querySelector('.delete').onclick = async () => {
-        const confirmName = prompt(`输入项目名以确认删除: ${projectName}`);
+        const confirmName = prompt(`Enter project name to confirm deletion: ${projectName}`);
         if (confirmName === projectName) {
             await ProjectService.deleteProject(projectName);
             renderProjectList();
         } else {
-            alert('项目名不匹配，未删除');
+            alert('Project name does not match, not deleted');
         }
         removeContextMenu();
     };
@@ -155,7 +155,7 @@ function removeContextMenu() {
 
 if (newProjectBtn) {
     newProjectBtn.addEventListener('click', async () => {
-        const name = prompt('新项目名称?');
+        const name = prompt('New project name?');
         if (name) {
             await ProjectService.createProject(name);
             renderProjectList();
@@ -163,5 +163,5 @@ if (newProjectBtn) {
     });
 }
 
-// 初始化渲染
+// Initialize rendering
 renderProjectList();

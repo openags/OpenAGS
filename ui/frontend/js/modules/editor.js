@@ -1,16 +1,16 @@
 export function initEditorTab(container) {
   const editorContainer = container.querySelector('.editor-container');
   
-  // 初始化文件树
+  // Initialize file tree
   initFileExplorer();
   
-  // 初始化编辑器标签页和内容
+  // Initialize editor tabs and content
   initEditor();
   
   function initFileExplorer() {
     const fileTree = editorContainer.querySelector('.file-tree');
     
-    // 示例文件结构
+    // Example file structure
     const files = [
       {
         name: 'src',
@@ -54,7 +54,7 @@ export function initEditorTab(container) {
         renderFileTree(li, file.children);
       }
       
-      // 添加点击事件
+      // Add click event
       li.addEventListener('click', (e) => {
         e.stopPropagation();
         if (file.type === 'file') {
@@ -74,7 +74,7 @@ export function initEditorTab(container) {
     const editorTabs = editorContainer.querySelector('.editor-tabs');
     const editorContent = editorContainer.querySelector('.editor-content');
     
-    // 添加标签页
+    // Add tab
     function addEditorTab(filename) {
       const tab = document.createElement('div');
       tab.className = 'editor-tab';
@@ -84,50 +84,50 @@ export function initEditorTab(container) {
       `;
       
       tab.addEventListener('click', () => {
-        // 切换活动标签页
+        // Switch active tab
         editorTabs.querySelectorAll('.editor-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        // 加载文件内容
+        // Load file content
         loadFileContent(filename);
       });
       
-      // 关闭标签页
+      // Close tab
       tab.querySelector('.fa-times').addEventListener('click', (e) => {
         e.stopPropagation();
         closeEditorTab(tab, filename);
       });
       
       editorTabs.appendChild(tab);
-      tab.click(); // 自动激活新标签页
+      tab.click(); // Auto activate new tab
     }
     
     function closeEditorTab(tab, filename) {
       tab.remove();
-      // 如果还有其他标签页，激活第一个
+      // If there are other tabs, activate the first one
       const remainingTabs = editorTabs.querySelectorAll('.editor-tab');
       if (remainingTabs.length > 0) {
         remainingTabs[0].click();
       } else {
-        editorContent.innerHTML = ''; // 清空编辑器内容
+        editorContent.innerHTML = ''; // Clear editor content
       }
     }
   }
   
   function loadFileContent(filename) {
-    // 这里应该从后端加载文件内容
+    // Here should load file content from backend
     const editorContent = editorContainer.querySelector('.editor-content');
     editorContent.innerHTML = `<div class="loading">Loading ${filename}...</div>`;
   }
   
   function openFile(filename) {
-    // 检查文件是否已经打开
+    // Check if file is already open
     const existingTab = Array.from(editorContainer.querySelectorAll('.editor-tab'))
       .find(tab => tab.querySelector('span').textContent === filename);
       
     if (existingTab) {
-      existingTab.click(); // 切换到已打开的标签页
+      existingTab.click(); // Switch to opened tab
     } else {
-      initEditor(filename); // 打开新标签页
+      initEditor(filename); // Open new tab
     }
   }
 }

@@ -601,14 +601,14 @@ body {
   padding: 1rem;
 }
 
-/* 基础文本样式 */
+/* Basic Text Styles */
 .chat-message-agent p {
   margin: 0.5em 0;
   line-height: 1.5;
   word-wrap: break-word;
 }
 
-/* 代码块样式 */
+/* Code Block Styles */
 .chat-message-agent pre {
   margin: 1em 0;
   padding: 1em;
@@ -622,14 +622,14 @@ body {
   font-size: 0.9em;
 }
 
-/* 内联代码 */
+/* Inline Code */
 .chat-message-agent :not(pre) > code {
   background: #23272e;
   padding: 0.2em 0.4em;
   border-radius: 4px;
 }
 
-/* Markdown 内容容器 */
+/* Markdown Content Container */
 .markdown-content {
   line-height: 1.5;
   white-space: normal;
@@ -640,7 +640,7 @@ body {
   word-break: normal;
 }
 
-/* Markdown 样式 */
+/* Markdown Styles */
 .markdown-content p {
   margin: 0.75em 0;
 }
@@ -696,7 +696,7 @@ body {
 .markdown-content h5 { font-size: 1em; }
 .markdown-content h6 { font-size: 0.9em; }
 
-/* 代码块容器 */
+/* Code Block Container */
 .code-block-container {
   margin: 1em 0;
   border-radius: 6px;
@@ -706,7 +706,7 @@ body {
   background: #23272e;
 }
 
-/* 代码块头部 */
+/* Code Block Header */
 .code-block-header {
   padding: 0.5em 1em;
   background: #23272e;
@@ -729,7 +729,7 @@ body {
   color: #8b949e;
 }
 
-/* 代码块本身 */
+/* Code Block Content */
 .code-block {
   margin: 0;
   padding: 1em;
@@ -752,7 +752,7 @@ body {
   overflow: visible;
 }
 
-/* 清除 hljs 默认样式 */
+/* Clear hljs Default Styles */
 .code-block code.hljs {
   padding: 0;
   margin: 0;
@@ -760,7 +760,7 @@ body {
   white-space: pre;
 }
 
-/* 内联代码样式 */
+/* Inline Code Styles */
 .markdown-content code:not(.hljs) {
   background: rgba(35, 39, 46, 0.8);
   padding: 0.2em 0.4em;
@@ -775,14 +775,14 @@ body {
   font-size: 0.9em;
 }
 
-/* 图片不溢出 */
+/* Images Styles */
 .markdown-content img {
   max-width: 100%;
   height: auto;
   overflow: visible !important;
 }
 
-/* 确保文本内容不受代码影响 */
+/* Ensure Text Content Not Affected by Code */
 .chat-message-agent > .markdown-content,
 .chat-message-agent > .code-block-container {
   overflow: visible !important;
@@ -790,7 +790,7 @@ body {
   word-break: break-word !important;
 }
 
-/* 移除不必要的溢出规则 */
+/* Remove Unnecessary Overflow Rules */
 .chat-message-agent *:not(.code-block):not(pre):not(code) {
   overflow: visible !important;
 }
@@ -1102,7 +1102,7 @@ body {
   overflow-y: auto;
 }
 
-/* References 美化 */
+/* Style References UI */
 .references-container {
   display: flex;
   flex-direction: column;

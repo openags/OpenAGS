@@ -1,30 +1,30 @@
 export function initPlannerTab(container) {
   const plannerContainer = container.querySelector('.planner-container');
   
-  // 初始化任务树
+  // Initialize task tree 
   initTaskTree();
   
-  // 初始化任务详情
+  // Initialize task details
   initTaskDetails();
   
   function initTaskTree() {
     const taskTree = plannerContainer.querySelector('.task-tree');
-    // 示例任务数据
+    // Sample task data
     const tasks = [
       {
         id: 1,
-        title: '文献综述',
+        title: 'Literature Review',
         status: 'in_progress',
         progress: 60,
         subtasks: [
-          { id: 11, title: '搜索相关论文', status: 'completed', progress: 100 },
-          { id: 12, title: '阅读和笔记', status: 'in_progress', progress: 70 },
-          { id: 13, title: '整理主要观点', status: 'not_started', progress: 0 }
+          { id: 11, title: 'Search Related Papers', status: 'completed', progress: 100 },
+          { id: 12, title: 'Read and Take Notes', status: 'in_progress', progress: 70 },
+          { id: 13, title: 'Organize Key Points', status: 'not_started', progress: 0 }
         ]
       },
       {
         id: 2,
-        title: '实验设计',
+        title: 'Experiment Design',
         status: 'not_started',
         progress: 0,
         subtasks: []
@@ -60,6 +60,6 @@ export function initPlannerTab(container) {
   
   function initTaskDetails() {
     const taskDetails = plannerContainer.querySelector('.task-details');
-    // 初始化任务详情界面
+    // Initialize task details interface
   }
 }
