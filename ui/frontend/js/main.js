@@ -18,9 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleIcon.classList.toggle('fa-chevron-right');
   });
 
-  // Tab切换函数
+  // Tab switch function
   function switchTab(tabId) {
-    // 移除所有active类
+    // Remove all active classes
     document.querySelectorAll('.tab').forEach(tab => {
       tab.classList.remove('active');
     });
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
       pane.classList.remove('active');
     });
     
-    // 激活选中的tab
+    // Activate the selected tab
     const selectedTab = document.querySelector(`.tab[data-tab="${tabId}"]`);
     const selectedPane = document.querySelector(`.tab-pane[data-tab-content="${tabId}"]`);
     
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedTab.classList.add('active');
       selectedPane.classList.add('active');
       
-      // 懒加载tab内容
+      // Lazy load tab content
       if (!selectedPane.dataset.initialized) {
         switch (tabId) {
           case 'chat':
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 绑定tab点击事件
+  // Bind tab click events
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const tabId = tab.dataset.tab;
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // 监听子模块点击事件
+  // Listen for child module click events
   document.querySelectorAll('.child-button').forEach(button => {
     button.addEventListener('click', () => {
       const tabId = button.dataset.tab;
@@ -76,9 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 默认显示chat tab
+  // Show chat tab by default
   switchTab('chat');
   
-  // 导出switchTab函数供其他模块使用
+  // Export switchTab function for other modules
   window.switchTab = switchTab;
 });

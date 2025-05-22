@@ -6,13 +6,13 @@ export function initBrowserTab(container) {
   const forwardBtn = browserContainer.querySelector('.forward-btn');
   const refreshBtn = browserContainer.querySelector('.refresh-btn');
   
-  // 浏览历史
+  // Browsing history
   const history = {
     entries: [],
     currentIndex: -1,
     
     add(url) {
-      // 移除当前位置后的所有记录
+      // Remove all entries after current position
       this.entries = this.entries.slice(0, this.currentIndex + 1);
       this.entries.push(url);
       this.currentIndex++;
@@ -46,27 +46,27 @@ export function initBrowserTab(container) {
     }
   };
   
-  // 更新导航按钮状态
+  // Update navigation button states
   function updateNavigationButtons() {
     backBtn.disabled = !history.canGoBack();
     forwardBtn.disabled = !history.canGoForward();
   }
   
-  // 加载URL
+  // Load URL
   async function loadUrl(url) {
     try {
       browserContent.innerHTML = '<div class="loading">Loading...</div>';
       
-      // 检查URL类型
+      // Check URL type
       if (url.endsWith('.pdf')) {
-        // PDF查看器
+        // PDF viewer
         const viewer = document.createElement('iframe');
         viewer.className = 'pdf-viewer';
         viewer.src = url;
         browserContent.innerHTML = '';
         browserContent.appendChild(viewer);
       } else {
-        // 网页查看器
+        // Web viewer
         const iframe = document.createElement('iframe');
         iframe.className = 'web-viewer';
         iframe.src = url;
@@ -74,7 +74,7 @@ export function initBrowserTab(container) {
         browserContent.appendChild(iframe);
       }
       
-      // 更新URL输入框和历史
+      // Update URL input and history
       urlInput.value = url;
       history.add(url);
       
@@ -82,8 +82,8 @@ export function initBrowserTab(container) {
       browserContent.innerHTML = `<div class="error">Failed to load: ${error.message}</div>`;
     }
   }
-  
-  // 事件监听
+
+  // Event listeners
   urlInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       let url = urlInput.value.trim();
@@ -109,6 +109,6 @@ export function initBrowserTab(container) {
     if (currentUrl) loadUrl(currentUrl);
   });
   
-  // 初始化导航按钮状态
+  // Initialize navigation button states
   updateNavigationButtons();
 }

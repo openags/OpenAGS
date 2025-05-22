@@ -1,57 +1,57 @@
 // ui/frontend/js/chat.js
 import ChatService from '../services/chatService.js';
 
-// 简化 markdown-it 配置
+// Simplify markdown-it configuration
 const md = window.markdownit({
   linkify: true,
   breaks: true
 });
 
 export function initChatTab(container) {
-  // 先清空 tabContent，防止内容堆叠或空白
+  // Clear tabContent to prevent content stacking or blank spaces
   container.innerHTML = '';
 
-  // 创建聊天容器
+  // Create chat container
   const chatContainer = document.createElement('div');
   chatContainer.classList.add('chat-container', 'fadeIn');
   chatContainer.dataset.tabContent = 'chat';
 
-  // 代理选择下拉框
+  // Agent selection dropdown
   const agentSelect = document.createElement('select');
   agentSelect.classList.add('chat-agent-select');
   agentSelect.innerHTML = '<option value="">Select Agent</option>';
 
-  // 消息区域
+  // Message area
   const messages = document.createElement('div');
   messages.classList.add('chat-messages');
 
-  // 输入容器
+  // Input container
   const inputContainer = document.createElement('div');
   inputContainer.classList.add('chat-input-container');
 
-  // 输入框
+  // Input field
   const input = document.createElement('input');
   input.type = 'text';
   input.classList.add('chat-input');
   input.placeholder = 'Type your message...';
 
-  // 发送/停止按钮
+  // Send/Stop button
   const actionButton = document.createElement('button');
   actionButton.classList.add('chat-send');
   actionButton.textContent = 'Send';
   actionButton.dataset.action = 'send';
 
-  // 错误消息
+  // Error message
   const errorDiv = document.createElement('div');
   errorDiv.classList.add('chat-error');
   errorDiv.style.display = 'none';
 
-  // 组装元素
+  // Assemble elements
   inputContainer.append(agentSelect, input, actionButton);
   chatContainer.append(messages, inputContainer, errorDiv);
   container.appendChild(chatContainer);
 
-  // 获取代理列表
+  // Fetch agent list
   fetch('http://localhost:8000/agents')
     .then(response => response.json())
     .then(data => {
@@ -61,7 +61,7 @@ export function initChatTab(container) {
         option.textContent = agent;
         agentSelect.appendChild(option);
       });
-      agentSelect.value = 'GSAgent'; // 默认选择
+      agentSelect.value = 'GSAgent'; // Default selection
     })
     .catch(err => {
       errorDiv.textContent = 'Failed to load agents: ' + err.message;
@@ -70,7 +70,7 @@ export function initChatTab(container) {
 
   let abortController = null;
 
-  // 切换按钮状态
+  // Toggle button state
   function toggleButtonState(state) {
     if (state === 'sending') {
       actionButton.textContent = 'Stop';
@@ -87,11 +87,11 @@ export function initChatTab(container) {
     }
   }
 
-  // 获取当前选中项目名
+  // Get current selected project name
   const projectName = localStorage.getItem('selectedProject') || 'Default';
   const chatHistoryKey = `chat_history_${projectName}`;
 
-  // 渲染历史消息
+  // Render message history
   function renderHistory() {
     messages.innerHTML = '';
     const history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
@@ -128,7 +128,7 @@ export function initChatTab(container) {
     userMessage.textContent = message;
     messages.appendChild(userMessage);
 
-    // 保存到历史
+    // Save to history
     let history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
     history.push({ role: 'user', content: message });
     localStorage.setItem(chatHistoryKey, JSON.stringify(history));
@@ -142,7 +142,7 @@ export function initChatTab(container) {
     agentMessage.classList.add('chat-message', 'chat-message-agent');
     messages.appendChild(agentMessage);
 
-    // 累积的消息内容
+    // Accumulated message content
     let fullContent = '';
 
     try {
@@ -151,18 +151,18 @@ export function initChatTab(container) {
         agentType,
         { stream: true, signal: abortController.signal },
         (chunk) => {
-          // 处理数组类型的chunk
+          // Handle array type chunks
           if (Array.isArray(chunk)) {
             chunk = chunk.join('');
           }
 
-          // 追加内容
+          // Append content
           fullContent += chunk;
           
-          // 渲染markdown
+          // Render markdown
           agentMessage.innerHTML = md.render(fullContent);
           
-          // 滚动到底部
+          // Scroll to bottom
           messages.scrollTop = messages.scrollHeight;
         },
         (err) => {
@@ -175,7 +175,7 @@ export function initChatTab(container) {
           errorDiv.style.display = 'block';
         }
       );
-      // 保存 agent 回复到历史
+      // Save agent reply to history
       history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
       history.push({ role: 'agent', content: fullContent });
       localStorage.setItem(chatHistoryKey, JSON.stringify(history));
@@ -195,14 +195,14 @@ export function initChatTab(container) {
     errorDiv.style.display = 'block';
   }
 
-  // 停止生成
+  // Stop generation
   function stopGeneration() {
     if (abortController) {
       abortController.abort();
     }
   }
 
-  // 事件监听
+  // Event listeners
   actionButton.addEventListener('click', handleButtonClick);
   input.addEventListener('keypress', e => {
     if (e.key === 'Enter' && actionButton.dataset.action === 'send') {
