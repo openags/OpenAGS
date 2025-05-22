@@ -5,12 +5,13 @@ from typing import List, Optional
 from datetime import datetime, date
 import os
 from pathlib import Path
-
 import requests
 import feedparser
 from PyPDF2 import PdfReader
-
 from gscientist.references.paper import Paper
+
+from sciagents.tools import FunctionTool, function_tool
+
 
 class ArxivSearcher:
     """Searcher for arXiv papers"""
@@ -126,3 +127,33 @@ class ArxivSearcher:
         except Exception as e:
             print(f"Error reading PDF for paper {paper_id}: {e}")
             return ""
+        
+
+    def get_tools(self):
+
+        # FunctionTool def __init__(self, func: Callable, name: Optional[str] = None, description: Optional[str] = None)
+        search_tool = FunctionTool(
+            func=self.search,
+            name="arxiv_search",
+            description="Search for academic papers on arXiv. "
+                        "Parameters: query (str): The search query string, "
+                        "max_results (int): Maximum number of results to return"
+        )
+
+        read_tool = FunctionTool(
+            func=self.read_paper,
+            name="arxiv_read",
+            description="Read a paper and convert it to text format. "
+                        "Parameters: paper_id (str): arXiv paper ID, "
+                        "save_path (str): Directory where the PDF is/will be saved"
+        )
+
+        download_tool = FunctionTool(
+            func=self.download_pdf,
+            name="arxiv_download",
+            description="Download PDF for a given arXiv paper ID. "
+                        "Parameters: paper_id (str): arXiv paper ID, "
+                        "save_path (str): Directory where to save the PDF"
+        )
+
+        return [search_tool, read_tool, download_tool]
