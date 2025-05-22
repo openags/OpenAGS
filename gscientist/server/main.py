@@ -6,31 +6,34 @@ import logging
 
 from gscientist.server.routers.agent_router import router as agent_router
 from gscientist.server.routers.project_router import router as project_router
+from gscientist.server.routers.references_router import router as references_router # Added references_router
 
-# 配置日志
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 创建 FastAPI 应用
+# Create FastAPI application
 app = FastAPI(
     title="GScientist Agent API",
     description="API for interacting with AI agents",
     version="0.1.0"
 )
 
-# 添加 CORS 中间件
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境中应指定具体域名
+    allow_origins=["*"],  # In production, specify specific domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 注册代理管理路由
+# Register agent management routes
 app.include_router(agent_router, prefix="/agents")
-# 注册项目管理路由
+# Register project management routes
 app.include_router(project_router, prefix="/projects")
+# Register references management routes
+app.include_router(references_router, prefix="/references") # Added references_router registration
 
 # 健康检查端点
 @app.get("/health")

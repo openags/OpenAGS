@@ -11,9 +11,9 @@ class ChatRequest(BaseModel):
     options: Optional[Dict[str, Any]] = Field(
         default=None, description="额外选项，如温度、工具参数"
     )
-
-    class Config:
-        schema_extra = {
+    
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "message": "Search for AI papers",
                 "history": [
@@ -23,6 +23,7 @@ class ChatRequest(BaseModel):
                 "options": {"temperature": 0.7}
             }
         }
+    }
 
 class ChatResponse(BaseModel):
     """聊天响应模型"""
@@ -31,8 +32,8 @@ class ChatResponse(BaseModel):
         default=None, description="元数据，如处理时间、模型信息"
     )
 
-    class Config:
-        schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "message": "Here are some AI papers: [...]",
                 "metadata": {
@@ -41,3 +42,4 @@ class ChatResponse(BaseModel):
                 }
             }
         }
+    }
