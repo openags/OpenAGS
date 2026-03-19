@@ -13,6 +13,7 @@ import {
   Lightbulb,
   MessageSquare,
   Paperclip,
+  Search,
   SearchCheck,
   Send,
   SendHorizonal,
@@ -119,14 +120,30 @@ function renderMarkdown(text: string): React.ReactNode {
     if (line.startsWith('```')) {
       if (inTable) flushTable(li)
       if (inCode) {
+        const code = codeBlock
         elements.push(
-          <pre key={`code-${li}`} style={{
-            background: '#f5f6f8', borderRadius: 8, padding: '10px 14px', fontSize: 13,
-            overflow: 'auto', margin: '8px 0', fontFamily: "'SF Mono', 'Fira Code', monospace",
-            border: '1px solid var(--border)',
-          }}>
-            <code>{codeBlock}</code>
-          </pre>
+          <div key={`code-${li}`} style={{ position: 'relative', margin: '8px 0' }}>
+            <pre style={{
+              background: '#f5f6f8', borderRadius: 8, padding: '10px 14px', fontSize: 13,
+              overflow: 'auto', fontFamily: "'SF Mono', 'Fira Code', monospace",
+              border: '1px solid var(--border)', margin: 0,
+            }}>
+              <code>{code}</code>
+            </pre>
+            <button
+              type="button"
+              onClick={() => { navigator.clipboard.writeText(code) }}
+              style={{
+                position: 'absolute', top: 6, right: 6, border: '1px solid var(--border)',
+                background: 'var(--bg-card)', borderRadius: 4, padding: '2px 6px',
+                fontSize: 10, cursor: 'pointer', color: 'var(--text-tertiary)',
+                opacity: 0.7, transition: 'opacity 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7' }}
+              title="Copy code"
+            >Copy</button>
+          </div>
         )
         codeBlock = ''
         inCode = false
@@ -246,14 +263,20 @@ function renderMarkdown(text: string): React.ReactNode {
 
   // Unclosed code block
   if (inCode && codeBlock) {
+    const unclosed = codeBlock
     elements.push(
-      <pre key="code-unclosed" style={{
-        background: '#f5f6f8', borderRadius: 8, padding: '10px 14px', fontSize: 13,
-        overflow: 'auto', margin: '8px 0', fontFamily: "'SF Mono', 'Fira Code', monospace",
-        border: '1px solid var(--border)',
-      }}>
-        <code>{codeBlock}</code>
-      </pre>
+      <div key="code-unclosed" style={{ position: 'relative', margin: '8px 0' }}>
+        <pre style={{
+          background: '#f5f6f8', borderRadius: 8, padding: '10px 14px', fontSize: 13,
+          overflow: 'auto', fontFamily: "'SF Mono', 'Fira Code', monospace",
+          border: '1px solid var(--border)', margin: 0,
+        }}>
+          <code>{unclosed}</code>
+        </pre>
+        <button type="button" onClick={() => { navigator.clipboard.writeText(unclosed) }}
+          style={{ position: 'absolute', top: 6, right: 6, border: '1px solid var(--border)', background: 'var(--bg-card)', borderRadius: 4, padding: '2px 6px', fontSize: 10, cursor: 'pointer', color: 'var(--text-tertiary)' }}
+          title="Copy code">Copy</button>
+      </div>
     )
   }
 
@@ -467,6 +490,7 @@ export default function Project(): React.ReactElement {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [input, setInput] = useState('')
+  const [chatSearch, setChatSearch] = useState('')
   const [threadsByKey, setThreadsByKey] = useState<Record<string, ChatThread[]>>(() => loadThreadStore())
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
   const [uploading, setUploading] = useState(false)
@@ -538,7 +562,7 @@ export default function Project(): React.ReactElement {
   // CLI chat WebSocket ref
   const cliWsRef = useRef<WebSocket | null>(null)
   // Refs declared here, initialized after activeThread/chatKey are defined (see below)
-  const activeThreadRef = useRef<typeof activeThread>(undefined as any)
+  const activeThreadRef = useRef<ChatThread | undefined>(undefined)
   const chatKeyRef = useRef('')
 
   // Helper: update the last assistant message in the active thread
@@ -758,7 +782,10 @@ export default function Project(): React.ReactElement {
   }, [activeSection, id, meta.chatEnabled, navigate, threadId, threads])
 
   const activeThread = threads.find((t) => t.id === threadId) || threads[0]
-  const messages = activeThread?.messages || []
+  const allMessages = activeThread?.messages || []
+  const messages = chatSearch
+    ? allMessages.filter(m => m.content.toLowerCase().includes(chatSearch.toLowerCase()))
+    : allMessages
 
   // Keep refs in sync (for WebSocket handler — avoids stale closures)
   activeThreadRef.current = activeThread
@@ -999,8 +1026,31 @@ export default function Project(): React.ReactElement {
         >
           {meta.title}
         </span>
-        {/* Spacer to push icons to the right */}
+        {/* Spacer */}
         <div style={{ flex: 1 }} />
+        {/* Chat search */}
+        {meta.chatEnabled && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 6,
+            background: chatSearch ? 'var(--accent-light)' : 'transparent',
+            border: chatSearch ? '1px solid var(--accent)' : '1px solid transparent',
+          }}>
+            <Search size={13} color={chatSearch ? 'var(--accent)' : 'var(--text-tertiary)'} />
+            <input
+              value={chatSearch}
+              onChange={e => setChatSearch(e.target.value)}
+              placeholder="Search..."
+              style={{
+                width: chatSearch ? 120 : 0, border: 'none', background: 'transparent',
+                fontSize: 12, outline: 'none', color: 'var(--text)',
+                transition: 'width 0.2s', padding: 0,
+              }}
+              onFocus={e => { e.currentTarget.style.width = '120px' }}
+              onBlur={e => { if (!chatSearch) e.currentTarget.style.width = '0px' }}
+            />
+          </div>
+        )}
         {/* Terminal toggle */}
         {meta.chatEnabled && terminalCwd && (
           <div

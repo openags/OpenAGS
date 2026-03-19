@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import io
 import re
+import shutil
 import unicodedata
+import zipfile
 from pathlib import Path
 
 import yaml
 from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from openags.agent.errors import ProjectError
@@ -37,7 +41,8 @@ class CreateProjectRequest(BaseModel):
     name: str
     description: str = ""
     project_id: str = ""
-    workspace_dir: str = ""  # custom workspace directory (empty = use default)
+    workspace_dir: str = ""
+    template: str = "research"  # research, minimal, data-science, or custom template name
 
 
 class ProjectConfigUpdate(BaseModel):
@@ -222,3 +227,131 @@ async def update_project_config(
         pm._save_meta(project)
 
     return data
+
+
+@router.get("/{project_id}/export")
+async def export_project(request: Request, project_id: str) -> StreamingResponse:
+    """Export a project as a zip file."""
+    pm = _get_pm(request)
+    try:
+        project = pm.get(project_id)
+    except ProjectError:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file_path in project.workspace.rglob("*"):
+            if file_path.is_file():
+                # Skip large/binary files and caches
+                rel = file_path.relative_to(project.workspace)
+                skip = any(p in str(rel) for p in ["__pycache__", ".build", "node_modules", ".git"])
+                if skip:
+                    continue
+                if file_path.stat().st_size > 10_000_000:  # 10MB limit per file
+                    continue
+                zf.write(file_path, str(rel))
+
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={project_id}.zip"},
+    )
+
+
+class CloneRequest(BaseModel):
+    new_name: str
+
+
+@router.post("/{project_id}/clone")
+async def clone_project(request: Request, project_id: str, body: CloneRequest) -> dict:
+    """Clone an existing project with a new name."""
+    pm = _get_pm(request)
+    try:
+        project = pm.get(project_id)
+    except ProjectError:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+
+    # Generate new ID from name
+    new_id = _slugify(body.new_name)
+    new_workspace = project.workspace.parent / new_id
+
+    if new_workspace.exists():
+        raise HTTPException(status_code=409, detail=f"Project '{new_id}' already exists")
+
+    # Copy entire directory
+    shutil.copytree(project.workspace, new_workspace)
+
+    # Update meta
+    meta_path = new_workspace / ".openags" / "meta.yaml"
+    if meta_path.exists():
+        meta = yaml.safe_load(meta_path.read_text(encoding="utf-8")) or {}
+        meta["id"] = new_id
+        meta["name"] = body.new_name
+        meta_path.write_text(yaml.dump(meta, allow_unicode=True), encoding="utf-8")
+
+    return {"id": new_id, "name": body.new_name, "workspace": str(new_workspace)}
+
+
+@router.get("/templates/list")
+async def list_templates(request: Request) -> list[dict]:
+    """List available project templates (built-in + custom)."""
+    from openags.research.templates import _research_template, _minimal_template
+
+    built_in = [
+        {"name": "research", "description": "Full research workflow (7 modules)", "builtin": True},
+        {"name": "minimal", "description": "Minimal project (coordinator only)", "builtin": True},
+    ]
+
+    # Custom templates from workspace/templates/
+    pm = _get_pm(request)
+    custom_dir = pm._workspace / "templates"
+    custom = []
+    if custom_dir.exists():
+        for d in sorted(custom_dir.iterdir()):
+            if d.is_dir() and (d / ".openags" / "meta.yaml").exists():
+                try:
+                    meta = yaml.safe_load((d / ".openags" / "meta.yaml").read_text(encoding="utf-8")) or {}
+                    custom.append({"name": d.name, "description": meta.get("description", ""), "builtin": False})
+                except Exception:
+                    custom.append({"name": d.name, "description": "", "builtin": False})
+
+    return built_in + custom
+
+
+class SaveTemplateRequest(BaseModel):
+    template_name: str
+
+
+@router.post("/{project_id}/save-template")
+async def save_as_template(request: Request, project_id: str, body: SaveTemplateRequest) -> dict:
+    """Save a project's structure as a reusable template."""
+    pm = _get_pm(request)
+    try:
+        project = pm.get(project_id)
+    except ProjectError:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+
+    template_dir = pm._workspace / "templates" / body.template_name
+    if template_dir.exists():
+        raise HTTPException(status_code=409, detail=f"Template '{body.template_name}' already exists")
+
+    # Copy project structure (SOUL.md, skills, config — skip data/sessions/uploads)
+    skip_dirs = {"sessions", "uploads", "data", "runs", ".build", "__pycache__", ".git", "node_modules"}
+    skip_exts = {".pdf", ".csv", ".jsonl", ".log", ".png", ".jpg"}
+
+    template_dir.mkdir(parents=True, exist_ok=True)
+    for src in project.workspace.rglob("*"):
+        if any(p in src.parts for p in skip_dirs):
+            continue
+        if src.is_file() and src.suffix in skip_exts:
+            continue
+        rel = src.relative_to(project.workspace)
+        dst = template_dir / rel
+        if src.is_dir():
+            dst.mkdir(parents=True, exist_ok=True)
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+
+    return {"template_name": body.template_name, "path": str(template_dir)}

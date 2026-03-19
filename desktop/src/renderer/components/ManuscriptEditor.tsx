@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import CodeEditor from './CodeEditor'
 import {
   ChevronRight,
   ChevronDown,
@@ -571,39 +572,16 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
             </div>
           </div>
 
-          {/* Editor area */}
+          {/* Editor area — CodeMirror */}
           {activeTab ? (
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-              {isTexFile && (
-                <pre
-                  ref={highlightRef}
-                  aria-hidden="true"
-                  dangerouslySetInnerHTML={{ __html: highlightLaTeX(activeContent) }}
-                  style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                    padding: '12px 14px', margin: 0,
-                    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-                    fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordWrap: 'break-word',
-                    overflow: 'hidden', pointerEvents: 'none', tabSize: 2, color: 'transparent',
-                  }}
-                />
-              )}
-              <textarea
-                ref={editorRef}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <CodeEditor
                 value={activeContent}
-                onChange={handleEditorChange}
-                onKeyDown={handleEditorKeyDown}
-                onScroll={syncScroll}
-                spellCheck={false}
-                style={{
-                  position: 'relative', zIndex: 1,
-                  width: '100%', height: '100%', border: 'none', outline: 'none', resize: 'none',
-                  padding: '12px 14px',
-                  fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-                  fontSize: 13, lineHeight: 1.6,
-                  background: isTexFile ? 'transparent' : '#fff',
-                  color: 'var(--text)',
-                  caretColor: 'var(--text)', tabSize: 2,
+                onChange={(val) => {
+                  if (activeTab) {
+                    setFileContents(prev => ({ ...prev, [activeTab]: val }))
+                    setDirty(prev => ({ ...prev, [activeTab]: true }))
+                  }
                 }}
               />
             </div>

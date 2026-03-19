@@ -27,10 +27,13 @@ class ExperimentEngine:
         backend: Backend,
         sandbox_mode: SandboxMode = SandboxMode.LOCAL,
         max_fix_attempts: int = 5,
+        on_output: object | None = None,
     ) -> None:
         self._backend = backend
         self._sandbox_factory = SandboxFactory(sandbox_mode)
         self._max_fix = max_fix_attempts
+        # Optional callback: on_output(stream: str, text: str) where stream is 'stdout'|'stderr'|'status'
+        self._on_output = on_output
 
     async def run(self, experiment: Experiment) -> ExperimentResult:
         """Execute an experiment with auto-fix loop."""
@@ -50,12 +53,21 @@ class ExperimentEngine:
             )
 
             try:
+                self._emit("status", f"[Attempt {attempt}/{self._max_fix}] Running {experiment.code_path.name}...")
+
                 result = await sandbox.execute(
                     command=f"python {experiment.code_path.name}",
                     env={"CUDA_VISIBLE_DEVICES": self._gpu_env(experiment)},
                 )
 
+                # Stream output
+                if result.stdout:
+                    self._emit("stdout", result.stdout)
+                if result.stderr:
+                    self._emit("stderr", result.stderr)
+
                 if result.returncode == 0:
+                    self._emit("status", f"[Success] Completed in {time.monotonic() - start:.1f}s")
                     return ExperimentResult(
                         success=True,
                         data={"stdout": result.stdout, "stderr": result.stderr},
@@ -64,6 +76,7 @@ class ExperimentEngine:
                     )
 
                 last_error = result.stderr or f"Exit code {result.returncode}"
+                self._emit("status", f"[Failed] Attempt {attempt}: {last_error[:100]}")
                 logger.warning(
                     "Experiment '%s' failed (attempt %d): %s",
                     experiment.name, attempt, last_error[:200],
@@ -138,6 +151,14 @@ class ExperimentEngine:
             logger.warning("Auto-fix produced invalid Python syntax, discarding")
             return None
         return code
+
+    def _emit(self, stream: str, text: str) -> None:
+        """Emit output to the callback if registered."""
+        if self._on_output is not None:
+            try:
+                self._on_output(stream, text)  # type: ignore[operator]
+            except Exception:
+                pass
 
     @staticmethod
     def _gpu_env(experiment: Experiment) -> str:

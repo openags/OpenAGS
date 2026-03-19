@@ -485,7 +485,13 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
                 alignItems: 'center',
               }}
             >
-              <span>Projects</span>
+              <span
+                onClick={() => navigate('/')}
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)' }}
+                title="Dashboard"
+              >Projects</span>
               <div
                 onClick={() => navigate('/')}
                 style={{

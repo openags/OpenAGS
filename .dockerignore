@@ -1,0 +1,12 @@
+node_modules
+desktop/node_modules
+desktop/out
+.venv
+__pycache__
+*.pyc
+.git
+.env
+*.egg-info
+dist
+build
+.openags

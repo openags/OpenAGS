@@ -9,6 +9,7 @@ interface Skill {
   roles: string[]
   triggers: string[]
   version: string
+  source_path?: string
 }
 
 export default function Skills(): React.ReactElement {
@@ -143,14 +144,19 @@ export default function Skills(): React.ReactElement {
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 10 }}>
                   {skill.description}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: skill.source_path ? 8 : 0 }}>
                   {skill.roles.map((r) => (
                     <Tag key={r} color="blue" style={{ margin: 0, fontSize: 11 }}>{r}</Tag>
                   ))}
-                  {skill.triggers.map((t) => (
+                  {skill.triggers.filter(t => t !== 'always').map((t) => (
                     <Tag key={t} color="green" style={{ margin: 0, fontSize: 11 }}>{t}</Tag>
                   ))}
                 </div>
+                {skill.source_path && (
+                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {skill.source_path.replace(/^.*\/skills\//, 'skills/')}
+                  </div>
+                )}
               </div>
             )
           })}

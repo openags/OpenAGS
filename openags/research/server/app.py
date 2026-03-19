@@ -31,8 +31,10 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="OpenAGS",
         description="Open Autonomous Generalist Scientist API",
-        version="0.1.0",
+        version="0.2.0",
         lifespan=lifespan,
+        docs_url="/docs",
+        redoc_url="/redoc",
     )
 
     # CORS: allow any localhost origin (dynamic Vite ports) + Electron
@@ -46,8 +48,13 @@ def create_app() -> FastAPI:
     )
 
     # Production middleware: rate limiting + audit logging
-    from openags.research.server.middleware import AuditLogMiddleware, RateLimitMiddleware
+    from openags.research.server.middleware import (
+        AuditLogMiddleware,
+        RateLimitMiddleware,
+        SecurityHeadersMiddleware,
+    )
 
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AuditLogMiddleware)
     app.add_middleware(RateLimitMiddleware, max_requests=120, window_seconds=60)
 

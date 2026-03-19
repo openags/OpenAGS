@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Empty, Spin } from 'antd'
-import { Search, FileText, RefreshCw, DollarSign, Cpu, ArrowDownUp } from 'lucide-react'
+import { Empty, Spin, message } from 'antd'
+import { Search, FileText, RefreshCw, DollarSign, Cpu, ArrowDownUp, Download } from 'lucide-react'
 import { api } from '../services/api'
 
 interface TokenEntry {
@@ -115,19 +115,33 @@ export default function Logs(): React.ReactElement {
           </div>
           <button
             type="button"
+            onClick={() => {
+              if (filtered.length === 0) { message.info('No data to export'); return }
+              const header = 'timestamp,project,agent,model,input_tokens,output_tokens,cost_usd'
+              const rows = filtered.map(e => `${e.timestamp},${e.project_id},${e.agent_role},${e.model || ''},${e.input_tokens},${e.output_tokens},${e.cost_usd}`)
+              const csv = [header, ...rows].join('\n')
+              const blob = new Blob([csv], { type: 'text/csv' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a'); a.href = url; a.download = `openags-logs-${new Date().toISOString().slice(0,10)}.csv`; a.click()
+              URL.revokeObjectURL(url)
+              message.success('CSV exported')
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px',
+              border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-card)',
+              cursor: 'pointer', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)',
+            }}
+          >
+            <Download size={13} />
+            CSV
+          </button>
+          <button
+            type="button"
             onClick={() => void fetchLogs()}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '7px 12px',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              background: 'var(--bg-card)',
-              cursor: 'pointer',
-              fontSize: 12,
-              fontWeight: 500,
-              color: 'var(--text-secondary)',
+              display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px',
+              border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-card)',
+              cursor: 'pointer', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)',
             }}
           >
             <RefreshCw size={13} />
@@ -188,6 +202,7 @@ export default function Logs(): React.ReactElement {
                 <th style={thStyle}>Time</th>
                 <th style={thStyle}>Project</th>
                 <th style={thStyle}>Agent</th>
+                <th style={thStyle}>Model</th>
                 <th style={{ ...thStyle, textAlign: 'right' }}>Input</th>
                 <th style={{ ...thStyle, textAlign: 'right' }}>Output</th>
                 <th style={{ ...thStyle, textAlign: 'right' }}>Cost</th>
@@ -224,6 +239,11 @@ export default function Logs(): React.ReactElement {
                       }}
                     >
                       {entry.agent_role}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
+                      {entry.model || '-'}
                     </span>
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'right', fontFamily: 'monospace', fontSize: 12 }}>
