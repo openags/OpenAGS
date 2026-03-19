@@ -196,7 +196,8 @@ def test_skill_count(client):
 
 def test_skills_for_invalid_role(client):
     r = client.get("/api/skills/role/nonexistent")
-    assert r.status_code == 400
+    assert r.status_code == 200
+    assert r.json() == []
 
 
 def test_skills_for_valid_role(client):

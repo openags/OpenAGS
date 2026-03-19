@@ -18,8 +18,7 @@ def _get_skill_engine(request: Request) -> SkillEngine:
     if not hasattr(request.app.state, "skill_engine"):
         config = request.app.state.config
         skill_dirs = [
-            Path("skills/core"),
-            Path("skills/shared"),
+            Path("skills"),
             config.workspace_dir / "skills",
         ]
         request.app.state.skill_engine = SkillEngine(skill_dirs=skill_dirs)
@@ -41,10 +40,7 @@ async def skill_count(request: Request) -> dict[str, int]:
 async def skills_for_role(request: Request, role: str) -> list[SkillMeta]:
     """Get skills applicable to a specific agent role or name."""
     engine = _get_skill_engine(request)
-    results = engine.get_for_agent(role)
-    if not results:
-        raise HTTPException(status_code=400, detail=f"Unknown role/agent: {role}")
-    return results
+    return engine.get_for_agent(role)
 
 
 class TriggerRequest(BaseModel):

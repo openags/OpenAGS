@@ -78,6 +78,31 @@ async def run_experiment(
     return result
 
 
+@router.get("/{project_id}/checkpoints")
+async def list_checkpoints(request: Request, project_id: str) -> list[dict]:
+    """List all agent checkpoints (completion history) for a project."""
+    import json
+
+    orch = _get_orch(request)
+    try:
+        project = orch.project_mgr.get(project_id)
+    except ProjectError:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+
+    log_path = project.workspace / ".openags" / "checkpoints" / "log.jsonl"
+    if not log_path.exists():
+        return []
+
+    entries = []
+    for line in log_path.read_text(encoding="utf-8").strip().split("\n"):
+        if line.strip():
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return list(reversed(entries))  # newest first
+
+
 @router.get("/{project_id}/runs")
 async def list_runs(request: Request, project_id: str) -> list[dict[str, str]]:
     """List experiment run directories for a project."""

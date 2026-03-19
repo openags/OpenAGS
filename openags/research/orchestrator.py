@@ -107,6 +107,46 @@ class Orchestrator:
                 logger.error("Failed to connect MCP server '%s': %s", server_config.name, e)
         return count
 
+    def _write_checkpoint(
+        self,
+        project: Project,
+        agent_name: str,
+        task: str,
+        result: AgentResult,
+    ) -> None:
+        """Write a checkpoint after an agent completes a task."""
+        import json as _json
+        from datetime import datetime, timezone
+
+        checkpoint_dir = project.workspace / ".openags" / "checkpoints"
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+        checkpoint = {
+            "agent": agent_name,
+            "task": task[:200],
+            "success": result.success,
+            "duration_seconds": result.duration_seconds,
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "output_preview": (result.output or "")[:500],
+            "error": result.error,
+            "token_usage": {
+                "input": result.token_usage.input_tokens,
+                "output": result.token_usage.output_tokens,
+                "cost_usd": result.token_usage.cost_usd,
+            },
+        }
+
+        # Write latest checkpoint per agent
+        path = checkpoint_dir / f"{agent_name}.json"
+        path.write_text(_json.dumps(checkpoint, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        # Append to checkpoint log
+        log_path = checkpoint_dir / "log.jsonl"
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(_json.dumps(checkpoint, ensure_ascii=False) + "\n")
+
+        logger.info("Checkpoint written for agent[%s] (success=%s)", agent_name, result.success)
+
     def _get_or_create_agent(self, agent_name: str, project: Project) -> Agent:
         """Get cached OpenAGS Agent. Only used in builtin mode."""
         key = (project.id, agent_name)
@@ -262,6 +302,9 @@ class Orchestrator:
         # (CLI agents like Claude Code / Codex are handled by the Desktop Node.js layer)
         agent = self._get_or_create_agent(agent_name, project)
         result = await agent.loop(task)
+
+        # Write checkpoint after agent completes
+        self._write_checkpoint(project, agent_name, task, result)
 
         # Auto-memory: learn from successful execution
         if hasattr(agent, '_auto_memory') and agent._auto_memory:

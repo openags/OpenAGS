@@ -1,7 +1,8 @@
-"""Auto Memory — agents automatically accumulate knowledge across sessions.
+"""Auto Memory — agents automatically accumulate categorized knowledge.
 
-After each agent loop completes, the system checks if the execution
-produced insights worth remembering. If so, they're written to MEMORY.md.
+After each agent loop completes, the system extracts insights and categorizes
+them into: success strategies, failure patterns, and research findings.
+Deduplication prevents the same insight from being recorded multiple times.
 The first 200 lines of MEMORY.md are loaded into every session.
 """
 
@@ -17,43 +18,49 @@ MAX_CONTEXT_LINES = 200
 
 
 class AutoMemory:
-    """Automatic learning system for agents."""
+    """Automatic categorized learning system for agents."""
 
     def __init__(self, module_dir: Path) -> None:
         self._memory_path = module_dir / MEMORY_FILE
         module_dir.mkdir(parents=True, exist_ok=True)
 
     async def maybe_learn(self, task: str, output: str, success: bool, backend: object) -> None:
-        """Extract and save reusable insights from a completed task.
+        """Extract and save categorized insights from a completed task.
 
-        Uses a lightweight LLM call to decide what's worth remembering.
-        Only saves on successful executions.
+        Now learns from both successes AND failures:
+        - Success → strategies that worked
+        - Failure → patterns to avoid
         """
-        if not success:
-            return
-        if len(output.strip()) < 100:
+        if len((output or "").strip()) < 50:
             return
 
+        status = "succeeded" if success else "failed"
         prompt = (
-            "Based on this task and result, extract any reusable insights worth "
-            "remembering for future sessions. Focus on:\n"
-            "- Commands or tools that worked\n"
-            "- Patterns or conventions discovered\n"
-            "- Key findings or decisions made\n"
-            "- Debugging insights\n\n"
+            f"This task {status}. Extract reusable insights, categorized as follows.\n\n"
+            "Categories (use exactly these headers):\n"
+            "- **Strategy**: approaches/commands/tools that worked well\n"
+            "- **Failure Pattern**: what went wrong and why (only if task failed)\n"
+            "- **Finding**: key discoveries, data points, or decisions made\n\n"
             f"Task: {task[:500]}\n"
-            f"Result: {output[:2000]}\n\n"
-            "If there are useful insights, output them as concise bullet points.\n"
-            "If nothing is worth remembering, output exactly: NONE"
+            f"Result ({status}): {output[:2000]}\n\n"
+            "Output concise bullet points under the relevant categories.\n"
+            "Skip categories with no insights. If nothing is worth remembering, output: NONE"
         )
 
         try:
-            response = await backend.execute(prompt, system="You extract reusable knowledge concisely.", timeout=30)  # type: ignore[attr-defined]
+            response = await backend.execute(prompt, system="You extract categorized knowledge concisely.", timeout=30)  # type: ignore[attr-defined]
             content = response.content.strip()
             if "NONE" in content.upper() or len(content) < 20:
                 return
-            self._append(content)
-            logger.info("Auto-memory updated for %s", self._memory_path.parent.name)
+
+            # Deduplicate: check if similar content already exists
+            existing = self._memory_path.read_text(encoding="utf-8") if self._memory_path.exists() else ""
+            if self._is_duplicate(content, existing):
+                logger.debug("Auto-memory skipped duplicate for %s", self._memory_path.parent.name)
+                return
+
+            self._append(content, success)
+            logger.info("Auto-memory updated for %s (%s)", self._memory_path.parent.name, status)
         except Exception as e:
             logger.debug("Auto-memory extraction skipped: %s", e)
 
@@ -69,12 +76,30 @@ class AutoMemory:
             context_lines.append(f"\n... ({len(lines) - MAX_CONTEXT_LINES} more lines in MEMORY.md)")
         return "\n".join(context_lines)
 
-    def _append(self, content: str) -> None:
-        """Append insights to MEMORY.md."""
+    def _is_duplicate(self, new_content: str, existing: str) -> bool:
+        """Check if the new content is too similar to existing memory."""
+        if not existing:
+            return False
+        # Extract bullet points from new content
+        new_bullets = {
+            line.strip().lower()
+            for line in new_content.splitlines()
+            if line.strip().startswith(("-", "*", "•"))
+        }
+        if not new_bullets:
+            return False
+        # Check overlap with existing
+        existing_lower = existing.lower()
+        matches = sum(1 for b in new_bullets if b.lstrip("-*• ") in existing_lower)
+        return matches >= len(new_bullets) * 0.7  # 70%+ overlap = duplicate
+
+    def _append(self, content: str, success: bool) -> None:
+        """Append categorized insights to MEMORY.md."""
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-        entry = f"\n### [{timestamp}]\n{content}\n"
+        icon = "✓" if success else "✗"
+        entry = f"\n### [{timestamp}] {icon}\n{content}\n"
 
         with open(self._memory_path, "a", encoding="utf-8") as f:
             f.write(entry)

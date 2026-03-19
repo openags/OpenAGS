@@ -48,6 +48,7 @@ const stageColor: Record<string, string> = {
 export default function Dashboard(): React.ReactElement {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<{ calls: number; cost_usd: number; input_tokens: number; output_tokens: number } | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [hoveredSkill, setHoveredSkill] = useState<number | null>(null)
   const [hoveredProject, setHoveredProject] = useState<string | null>(null)
@@ -71,6 +72,8 @@ export default function Dashboard(): React.ReactElement {
 
   useEffect(() => {
     fetchProjects()
+    api.get<{ calls: number; cost_usd: number; input_tokens: number; output_tokens: number }>('/api/logs/tokens')
+      .then(setStats).catch(() => {})
   }, [])
 
   // Close project menu on click anywhere
@@ -97,7 +100,7 @@ export default function Dashboard(): React.ReactElement {
   }
 
   const handleBrowseFolder = async (targetForm: typeof form) => {
-    const openags = (window as any).openags
+    const openags = (window as Record<string, unknown>).openags as { selectDirectory?: () => Promise<string | null> } | undefined
     if (openags?.selectDirectory) {
       const dir = await openags.selectDirectory()
       if (dir) {
@@ -239,6 +242,27 @@ export default function Dashboard(): React.ReactElement {
         >
           OpenAGS is your autonomous research assistant. Choose a skill to get started.
         </p>
+
+        {/* Stats bar */}
+        {stats && (
+          <div style={{
+            display: 'flex', gap: 16, marginBottom: 28, padding: '12px 20px',
+            borderRadius: 10, background: 'var(--bg-card)', border: '1px solid var(--border)',
+          }}>
+            {[
+              { label: 'Projects', value: String(projects.length), color: '#4f6ef7' },
+              { label: 'API Calls', value: stats.calls >= 1000 ? `${(stats.calls/1000).toFixed(1)}K` : String(stats.calls), color: '#22c55e' },
+              { label: 'Tokens', value: (stats.input_tokens + stats.output_tokens) >= 1000000 ? `${((stats.input_tokens + stats.output_tokens)/1000000).toFixed(1)}M` : `${((stats.input_tokens + stats.output_tokens)/1000).toFixed(0)}K`, color: '#8b5cf6' },
+              { label: 'Cost', value: `$${stats.cost_usd.toFixed(2)}`, color: '#f59e0b' },
+            ].map(s => (
+              <div key={s.label} style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div
           style={{
             display: 'grid',
@@ -439,23 +463,23 @@ export default function Dashboard(): React.ReactElement {
               >
                 {project.description || 'No description'}
               </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    fontSize: 12,
-                    color: 'var(--accent)',
-                    fontWeight: 500,
-                  }}
-                >
+              {/* Module progress dots */}
+              <div style={{ display: 'flex', gap: 3, marginBottom: 12 }}>
+                {['literature', 'proposal', 'experiments', 'manuscript', 'review'].map(mod => {
+                  const colors: Record<string, string> = { literature: '#8b5cf6', proposal: '#0ea5e9', experiments: '#22c55e', manuscript: '#f59e0b', review: '#ef4444' }
+                  return (
+                    <div key={mod} title={mod} style={{
+                      flex: 1, height: 4, borderRadius: 2,
+                      background: `${colors[mod] || '#ccc'}30`,
+                    }}>
+                      <div style={{ height: '100%', borderRadius: 2, background: colors[mod], width: '0%' }} />
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>
                   Open project <ArrowRight size={12} />
                 </div>
                 {project.created_at && (
@@ -510,6 +534,39 @@ export default function Dashboard(): React.ReactElement {
           >
             <Pencil size={13} strokeWidth={2} />
             <span style={{ flex: 1 }}>Edit</span>
+          </div>
+          <div
+            onClick={async () => {
+              const id = projectMenu.id
+              setProjectMenu(null)
+              const newName = window.prompt('Clone project — enter new name:')
+              if (newName) {
+                try {
+                  await api.post(`/api/projects/${id}/clone`, { new_name: newName })
+                  message.success(`Cloned to "${newName}"`)
+                  void fetchProjects()
+                } catch { message.error('Clone failed') }
+              }
+            }}
+            style={menuItemStyle}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+          >
+            <FolderOpen size={13} strokeWidth={2} />
+            <span style={{ flex: 1 }}>Clone</span>
+          </div>
+          <div
+            onClick={() => {
+              const id = projectMenu.id
+              setProjectMenu(null)
+              window.open(`/api/projects/${id}/export`, '_blank')
+            }}
+            style={menuItemStyle}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+          >
+            <ArrowRight size={13} strokeWidth={2} />
+            <span style={{ flex: 1 }}>Export ZIP</span>
           </div>
           <div style={{ height: 1, background: 'var(--border-light)', margin: '3px 6px' }} />
           <div

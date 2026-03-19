@@ -682,6 +682,44 @@ export default function Settings(): React.ReactElement {
         <SettingsField label={t('settings.tokenBudget')} hint={t('settings.tokenBudgetHint')}>
           <SettingsInput value={tokenBudget.value} onChange={(v) => setTokenBudget({ ...tokenBudget, value: v, dirty: true })} onSave={() => void saveField(tokenBudget, setTokenBudget)} saving={saving === tokenBudget.key} dirty={tokenBudget.dirty} placeholder="No limit" type="number" />
         </SettingsField>
+
+        {/* IM Notifications */}
+        <SettingsField label="Notifications" hint="Get notified when experiments complete">
+          {[
+            { key: 'messaging.telegram.token', label: 'Telegram Bot Token', placeholder: '123456:ABC-DEF...' },
+            { key: 'messaging.telegram.chat_id', label: 'Telegram Chat ID', placeholder: '-1001234567890' },
+            { key: 'messaging.discord.webhook_url', label: 'Discord Webhook URL', placeholder: 'https://discord.com/api/webhooks/...' },
+            { key: 'messaging.feishu.webhook_url', label: 'Feishu Webhook URL', placeholder: 'https://open.feishu.cn/open-apis/bot/v2/hook/...' },
+          ].map(field => (
+            <div key={field.key} style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 11, color: 'var(--text-tertiary)', display: 'block', marginBottom: 3 }}>{field.label}</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  placeholder={field.placeholder}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
+                      const val = (e.target as HTMLInputElement).value
+                      if (val) {
+                        try {
+                          await api.put('/api/config/', { key: field.key, value: val })
+                          message.success(`${field.label} saved`)
+                        } catch { message.error('Failed to save') }
+                      }
+                    }
+                  }}
+                  style={{
+                    flex: 1, padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 6,
+                    fontSize: 12, outline: 'none', background: 'var(--bg-input)', color: 'var(--text)',
+                    fontFamily: 'monospace',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+            Enter value and press Enter to save. Leave empty to disable.
+          </div>
+        </SettingsField>
       </SettingsSection>}
 
       {/* ── Compute & Servers ────────────────────────── */}

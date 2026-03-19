@@ -77,6 +77,20 @@ export default function AgentConfigPanel({ projectId, section, color, onClose }:
   useEffect(() => { void fetchConfig() }, [projectId, section])
 
   const saveSoul = async () => {
+    // Validate YAML frontmatter before saving
+    if (soulText.startsWith('---')) {
+      const endIdx = soulText.indexOf('---', 3)
+      if (endIdx === -1) {
+        message.error('Invalid SOUL.md: YAML frontmatter not closed (missing closing ---)')
+        return
+      }
+      const frontmatter = soulText.slice(3, endIdx).trim()
+      // Basic YAML validation: check for required 'name' field
+      if (!frontmatter.includes('name:')) {
+        message.warning('SOUL.md frontmatter is missing "name:" field')
+      }
+    }
+
     setSaving(true)
     try {
       await api.put(`/api/agent/${projectId}/${section}/soul`, { content: soulText })
@@ -280,10 +294,21 @@ export default function AgentConfigPanel({ projectId, section, color, onClose }:
               </div>
             )}
 
+            {/* Frontmatter hint */}
+            {!soulText.startsWith('---') && soulText.length === 0 && (
+              <div style={{
+                fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 6, padding: '6px 10px',
+                borderRadius: 6, background: 'var(--bg-sidebar)', border: '1px solid var(--border)',
+                fontFamily: 'monospace', lineHeight: 1.6, whiteSpace: 'pre',
+              }}>
+                {'---\nname: ' + section + '\ndescription: ""\ntools: [read, write, edit, ls, grep, bash]\nmax_steps: 20\n---\n\nYour agent prompt here...'}
+              </div>
+            )}
+
             <textarea
               value={soulText}
               onChange={(e) => { setSoulText(e.target.value); setSoulDirty(true) }}
-              placeholder="Define the agent's role, capabilities, and behavior..."
+              placeholder={'---\nname: ' + section + '\ndescription: "Agent description"\ntools: [read, write, edit, ls, grep, bash]\n---\n\nYour agent instructions here...'}
               style={{
                 width: '100%', minHeight: 300, padding: '10px 12px', border: `1px solid ${soulDirty ? color : 'var(--border)'}`,
                 borderRadius: 8, fontSize: 12, fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
