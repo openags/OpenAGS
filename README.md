@@ -19,7 +19,7 @@ An open-source framework for fully autonomous scientific research — from liter
 OpenAGS orchestrates a team of AI agents that collaborate across the full research lifecycle — literature review, hypothesis generation, experiments, manuscript writing, and peer review. One framework, end-to-end, fully autonomous.
 
 <div align="center">
-  <img src="docs/images/OpenAGS-Desktop1.jpg" alt="OpenAGS Desktop" width="720">
+  <img src="docs/images/OpenAGS-Desktop1.jpg" alt="OpenAGS Desktop">
   <br>
   <sub>OpenAGS Desktop — Multi-agent research workspace with integrated LaTeX editor</sub>
 </div>
@@ -27,7 +27,7 @@ OpenAGS orchestrates a team of AI agents that collaborate across the full resear
 <br>
 
 <div align="center">
-  <img src="docs/images/ags_framework.jpg" alt="AGS Framework" width="660">
+  <img src="docs/images/ags_framework.jpg" alt="AGS Framework">
   <br>
   <sub>Autonomous Generalist Scientist — Framework and Vision</sub>
 </div>
