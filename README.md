@@ -34,39 +34,6 @@ OpenAGS orchestrates a team of AI agents that collaborate across the full resear
 
 ---
 
-## Highlights
-
-<table>
-<tr>
-<td width="50%">
-
-**Folder = Agent**
-Each directory with a `SOUL.md` is an independent agent. Create new agents by simply adding a folder — no code required.
-
-**Multi-Backend**
-Use the builtin agent (100+ LLMs via LiteLLM), or plug in Claude Code, Codex, Cursor, or Gemini CLI as backends.
-
-**Unified Skills**
-Claude Code compatible `SKILL.md` format. Skills auto-discovered across all backends via symlinks.
-
-</td>
-<td width="50%">
-
-**Browser + Desktop**
-Same React UI runs in a browser (`localhost:3001`) or as an Electron app. All communication via WebSocket — no IPC.
-
-**LaTeX Editor**
-Built-in manuscript editor with syntax highlighting, file browser, and one-click PDF compilation (pdflatex / xelatex / tectonic).
-
-**Compute Management**
-Run experiments locally, in Docker containers, or on remote GPU servers via SSH — all configurable from the UI.
-
-</td>
-</tr>
-</table>
-
----
-
 ## Quick Start
 
 ### Prerequisites
@@ -141,20 +108,6 @@ The desktop app starts the Python backend automatically.
 │  LLM APIs │ arXiv │ Semantic Scholar │ Docker │ SSH │ OS          │
 └────────────────────────────────────────────────────────────────┘
 ```
-
-### How Agents Communicate
-
-Agents communicate through files — the only mechanism that works across all backends (builtin, Claude Code, Codex, etc.):
-
-| Agent | Reads from upstream | Writes |
-|-------|-------------------|--------|
-| **Literature** | `../CLAUDE.md`, `../uploads/` | `notes/`, `memory.md` |
-| **Proposal** | `../literature/notes/` | `ideas/proposal.md` |
-| **Experiments** | `../proposal/ideas/`, `../literature/notes/` | `code/`, `results/`, `data/` |
-| **Manuscript** | All upstream results + figures | `main.tex`, `references.bib` |
-| **Review** | `../manuscript/main.tex`, `../experiments/results/` | `reviews/` |
-
----
 
 ## Project Structure
 
