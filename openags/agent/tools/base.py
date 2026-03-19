@@ -129,6 +129,7 @@ def create_engine_registry(workspace: Path) -> ToolRegistry:
     """
     from openags.agent.tools.bash import BashExecuteTool
     from openags.agent.tools.edit import FileEditTool
+    from openags.agent.tools.fetch import WebFetchTool
     from openags.agent.tools.grep import FileSearchTool
     from openags.agent.tools.ls import FileListTool
     from openags.agent.tools.read import FileReadTool
@@ -141,6 +142,7 @@ def create_engine_registry(workspace: Path) -> ToolRegistry:
     registry.register(FileListTool(workspace))
     registry.register(FileSearchTool(workspace))
     registry.register(BashExecuteTool(workspace))
+    registry.register(WebFetchTool())
 
     # Backward-compat aliases
     registry.alias("file_read", "read")

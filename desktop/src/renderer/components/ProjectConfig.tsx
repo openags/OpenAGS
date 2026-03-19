@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { message } from 'antd'
 import { Save } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -56,7 +57,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (e) {
-      alert('Failed to save configuration')
+      message.error('Failed to save configuration')
     }
     setSaving(false)
   }
@@ -82,7 +83,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
 
       {/* General */}
       <div style={{
-        background: '#fff', border: '1px solid var(--border)', borderRadius: 10,
+        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
         padding: 16, marginBottom: 14,
       }}>
         <div style={{ fontWeight: 600, marginBottom: 14, fontSize: 15 }}>General</div>
@@ -125,7 +126,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
 
       {/* LaTeX / Manuscript */}
       <div style={{
-        background: '#fff', border: '1px solid var(--border)', borderRadius: 10,
+        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
         padding: 16, marginBottom: 14,
       }}>
         <div style={{ fontWeight: 600, marginBottom: 14, fontSize: 15 }}>LaTeX / Manuscript</div>
@@ -137,7 +138,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
           <select
             value={config.latex_engine || 'pdflatex'}
             onChange={e => setConfig(c => ({ ...c, latex_engine: e.target.value }))}
-            style={{ ...fieldStyle, background: '#fff' }}
+            style={{ ...fieldStyle, background: 'var(--bg-card)' }}
           >
             <option value="pdflatex">pdflatex</option>
             <option value="xelatex">xelatex</option>
@@ -149,7 +150,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
 
       {/* Agent */}
       <div style={{
-        background: '#fff', border: '1px solid var(--border)', borderRadius: 10,
+        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
         padding: 16, marginBottom: 14,
       }}>
         <div style={{ fontWeight: 600, marginBottom: 14, fontSize: 15 }}>Agent</div>
@@ -161,7 +162,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
           <select
             value={config.default_agent || 'coordinator'}
             onChange={e => setConfig(c => ({ ...c, default_agent: e.target.value }))}
-            style={{ ...fieldStyle, background: '#fff' }}
+            style={{ ...fieldStyle, background: 'var(--bg-card)' }}
           >
             <option value="coordinator">Coordinator</option>
             <option value="literature">Literature</option>
@@ -175,7 +176,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
 
       {/* Compute */}
       <div style={{
-        background: '#fff', border: '1px solid var(--border)', borderRadius: 10,
+        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
         padding: 16, marginBottom: 14,
       }}>
         <div style={{ fontWeight: 600, marginBottom: 14, fontSize: 15 }}>Compute (Experiments)</div>
@@ -187,7 +188,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
           <select
             value={config.compute?.execution_mode || 'local'}
             onChange={e => setConfig(c => ({ ...c, compute: { ...c.compute, execution_mode: e.target.value } }))}
-            style={{ ...fieldStyle, background: '#fff' }}
+            style={{ ...fieldStyle, background: 'var(--bg-card)' }}
           >
             <option value="local">Local (this machine)</option>
             <option value="docker">Docker (isolated container)</option>
@@ -203,7 +204,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
             <select
               value={config.compute?.remote_server || ''}
               onChange={e => setConfig(c => ({ ...c, compute: { ...c.compute, remote_server: e.target.value } }))}
-              style={{ ...fieldStyle, background: '#fff' }}
+              style={{ ...fieldStyle, background: 'var(--bg-card)' }}
             >
               <option value="">Select a server...</option>
               {remoteServers.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
@@ -224,7 +225,7 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
             <select
               value={config.compute?.gpu_count ?? 0}
               onChange={e => setConfig(c => ({ ...c, compute: { ...c.compute, gpu_count: parseInt(e.target.value) } }))}
-              style={{ ...fieldStyle, background: '#fff' }}
+              style={{ ...fieldStyle, background: 'var(--bg-card)' }}
             >
               {[0,1,2,4,8].map(n => <option key={n} value={n}>{n === 0 ? '0 (CPU only)' : n}</option>)}
             </select>

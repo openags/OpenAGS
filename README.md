@@ -12,6 +12,8 @@ An open-source framework for fully autonomous scientific research — from liter
 
 [Getting Started](#quick-start) &bull; [Architecture](#architecture) &bull; [Documentation](docs/architecture.md) &bull; [Citation](#citation)
 
+English | [中文](docs/i18n/README_ZH.md) | [日本語](docs/i18n/README_JA.md) | [Français](docs/i18n/README_FR.md) | [Deutsch](docs/i18n/README_DE.md) | [العربية](docs/i18n/README_AR.md)
+
 </div>
 
 ---

@@ -8,14 +8,10 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
 from openags.research.auth import UserManager
 from openags.research.config import load_config
 from openags.research.orchestrator import Orchestrator
-
-_STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "webui"
 
 
 @asynccontextmanager
@@ -90,12 +86,13 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok", "version": "0.1.0"}
 
-    # Serve built-in web dashboard
     @app.get("/")
-    async def root():
-        return FileResponse(_STATIC_DIR / "index.html")
-
-    if _STATIC_DIR.exists():
-        app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+    async def root() -> dict[str, str]:
+        return {
+            "name": "OpenAGS API",
+            "version": "0.1.0",
+            "docs": "/docs",
+            "ui": "http://localhost:3001",
+        }
 
     return app

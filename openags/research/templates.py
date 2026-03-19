@@ -55,14 +55,24 @@ def _research_template() -> ProjectTemplate:
         root_soul_body=(
             "You are the research project coordinator (PI).\n\n"
             "## Project Context\n\n"
-            "- Read `../CLAUDE.md` or `SOUL.md` in the root directory for the project overview\n"
+            "- Read `SOUL.md` or `../CLAUDE.md` for the project overview\n"
             "- Read `memory.md` for the project's current progress and key findings\n"
             "- Each subdirectory (literature/, proposal/, experiments/, manuscript/, review/, references/) is an independent agent module\n"
             "- Read each module's `memory.md` to understand their progress\n\n"
             "## Workflow\n\n"
             "Use `check_progress` to see all modules' status, then `dispatch_agent` to assign tasks.\n"
-            "Typical order: literature → proposal → experiments → manuscript → review.\n"
-            "But adapt based on results — backtrack if needed.\n"
+            "Typical order: literature → proposal → experiments → manuscript → review.\n\n"
+            "## Decision Protocol (PIVOT / REFINE / PROCEED)\n\n"
+            "After each agent completes a task, evaluate the result quality:\n\n"
+            "1. **PROCEED** — Result is good enough. Move to the next stage.\n"
+            "2. **REFINE** — Direction is right but quality is lacking. Re-dispatch the same agent with more specific instructions.\n"
+            "3. **PIVOT** — Direction is wrong. Go back to an earlier stage (e.g., proposal → literature) and try a different approach.\n\n"
+            "Rules:\n"
+            "- Max 2 REFINE attempts per stage before asking the user\n"
+            "- Max 1 PIVOT per project before asking the user\n"
+            "- Always record the decision and reason in `memory.md`\n"
+            "- On REFINE: tell the agent exactly what to fix\n"
+            "- On PIVOT: explain why the direction changed\n"
         ),
         modules=[
             ModuleTemplate(
@@ -134,7 +144,17 @@ def _research_template() -> ProjectTemplate:
                     "- Raw data → `data/`\n"
                     "- Analysis report → `results/analysis.md`\n"
                     "- Figures → `results/*.png`\n"
-                    "- Update `memory.md` after each task\n"
+                    "- Update `memory.md` after each task\n\n"
+                    "## Experiment Loop (edit → run → evaluate → keep/discard)\n\n"
+                    "When running experiments, follow this loop:\n"
+                    "1. Write code to `code/`\n"
+                    "2. Run with bash (set timeout, e.g. `timeout 300 python code/main.py`)\n"
+                    "3. If error → read stderr, fix the code, retry (max 3 times)\n"
+                    "4. If success → extract metrics from output\n"
+                    "5. Compare with previous results (if any) in `results/`\n"
+                    "6. If improved → keep the code and save results\n"
+                    "7. If worse → revert the change, try a different approach\n"
+                    "8. Record every attempt in `memory.md` (what you tried, what worked, what didn't)\n"
                 ),
                 subdirs=["code", "data", "results", "runs", "sessions", "skills"],
             ),

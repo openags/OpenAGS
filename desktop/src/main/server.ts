@@ -241,6 +241,32 @@ async function handleChatConnection(ws: WebSocket): Promise<void> {
     const { WsWriter } = await import('./providers/types')
     const writer = new WsWriter(ws)
 
+    // Read CLI provider config (Claude Code / Codex / Gemini)
+    if (data.type === 'read-cli-config') {
+      const { readCLIConfig, CLAUDE_PRESETS, CODEX_PRESETS, GEMINI_PRESETS } = await import('./providers/cli-config')
+      const backend = data.backend as string
+      const config = readCLIConfig(backend)
+      const presets = backend === 'claude_code' ? CLAUDE_PRESETS
+        : backend === 'codex' ? CODEX_PRESETS
+        : backend === 'gemini_cli' ? GEMINI_PRESETS : []
+      writer.send({ type: 'cli-config', config, presets })
+      return
+    }
+
+    // Write CLI provider config
+    if (data.type === 'write-cli-config') {
+      const { writeCLIConfig } = await import('./providers/cli-config')
+      const backend = data.backend as string
+      const config = data.config as { provider: string; apiKey: string; model: string; baseUrl: string }
+      try {
+        writeCLIConfig(backend, config)
+        writer.send({ type: 'cli-config-saved' })
+      } catch (err) {
+        writer.sendError(err instanceof Error ? err.message : String(err))
+      }
+      return
+    }
+
     // Sync config files across a project (triggered on backend switch)
     if (data.type === 'sync-configs') {
       const { syncProjectConfigs } = await import('./providers/adapter')

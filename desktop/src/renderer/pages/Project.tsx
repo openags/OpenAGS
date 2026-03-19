@@ -969,7 +969,7 @@ export default function Project(): React.ReactElement {
           alignItems: 'center',
           gap: 10,
           flexShrink: 0,
-          background: '#fff',
+          background: 'var(--bg-card)',
         }}
       >
         <div
@@ -1082,7 +1082,7 @@ export default function Project(): React.ReactElement {
               display: 'flex',
               flexDirection: 'column',
               flexShrink: 0,
-              background: '#fff',
+              background: 'var(--bg-card)',
             }}>
               {/* Resize handle */}
               <div
@@ -1274,7 +1274,7 @@ export default function Project(): React.ReactElement {
             {/* Input area */}
             <div style={{
               padding: '10px 16px 14px', borderTop: '1px solid var(--border)',
-              background: '#fff', flexShrink: 0,
+              background: 'var(--bg-card)', flexShrink: 0,
             }}>
               <div style={{ maxWidth: 820, margin: '0 auto' }}>
                 {/* Attached files chips */}
@@ -1314,7 +1314,7 @@ export default function Project(): React.ReactElement {
                     type="button"
                     onClick={() => cliFileInputRef.current?.click()}
                     style={{
-                      border: '1px solid var(--border)', background: '#fff', borderRadius: 10,
+                      border: '1px solid var(--border)', background: 'var(--bg-card)', borderRadius: 10,
                       width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', color: 'var(--text-tertiary)', flexShrink: 0,
                       transition: 'all var(--transition)',
@@ -1458,7 +1458,7 @@ export default function Project(): React.ReactElement {
             style={{
               padding: '10px 16px 14px',
               borderTop: '1px solid var(--border)',
-              background: '#fff',
+              background: 'var(--bg-card)',
               flexShrink: 0,
             }}
           >
@@ -1516,7 +1516,7 @@ export default function Project(): React.ReactElement {
                   disabled={uploading}
                   style={{
                     border: '1px solid var(--border)',
-                    background: '#fff',
+                    background: 'var(--bg-card)',
                     borderRadius: 10,
                     width: 40,
                     height: 40,

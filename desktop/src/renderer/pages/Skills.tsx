@@ -113,7 +113,7 @@ export default function Skills(): React.ReactElement {
                   padding: '18px 20px',
                   borderRadius: 'var(--radius)',
                   border: '1px solid var(--border)',
-                  background: '#fff',
+                  background: 'var(--bg-card)',
                   transition: 'all 0.2s ease',
                   boxShadow: hovered ? 'var(--shadow-md)' : 'var(--shadow-sm)',
                   transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
