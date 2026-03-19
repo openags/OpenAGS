@@ -32,6 +32,42 @@
   --transition: 0.15s ease;
 }
 
+/* Dark mode */
+[data-theme="dark"] {
+  --bg: #0f1117;
+  --bg-sidebar: #161821;
+  --bg-hover: #1e2030;
+  --bg-active: #262a3a;
+  --bg-card: #1a1c28;
+  --bg-input: #1e2030;
+  --text: #e2e4e9;
+  --text-secondary: #9ba1b0;
+  --text-tertiary: #636980;
+  --accent: #6c8cff;
+  --accent-hover: #5a7aff;
+  --accent-light: rgba(108,140,255,0.08);
+  --accent-medium: rgba(108,140,255,0.15);
+  --green: #34d399;
+  --green-light: rgba(52,211,153,0.1);
+  --red: #f87171;
+  --yellow: #fbbf24;
+  --border: #2a2d3a;
+  --border-light: #222536;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.2);
+}
+[data-theme="dark"] ::selection {
+  background: rgba(108,140,255,0.25);
+}
+
 * {
   box-sizing: border-box;
 }

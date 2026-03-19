@@ -255,7 +255,7 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
           position: 'fixed',
           top: contextMenu.y,
           left: contextMenu.x,
-          background: '#fff',
+          background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: 8,
           boxShadow: '0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06)',
@@ -625,7 +625,7 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
                                                   border: '1px solid var(--accent)',
                                                   borderRadius: 4,
                                                   outline: 'none',
-                                                  background: '#fff',
+                                                  background: 'var(--bg-card)',
                                                   color: 'var(--text)',
                                                   boxShadow: '0 0 0 2px rgba(79,110,247,0.1)',
                                                 }}
@@ -981,6 +981,12 @@ function ContextMenuItem({
 export default function App(): React.ReactElement {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
+
+  // Apply saved theme on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('openags-theme')
+    if (saved) document.documentElement.setAttribute('data-theme', saved)
+  }, [])
 
   // On mount: validate saved token, auto-login if valid
   useEffect(() => {

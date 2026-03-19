@@ -205,7 +205,7 @@ export default function AgentConfigPanel({ projectId, section, color, onClose }:
       borderLeft: '1px solid var(--border)',
       display: 'flex',
       flexDirection: 'column',
-      background: '#fff',
+      background: 'var(--bg-card)',
       flexShrink: 0,
       overflow: 'hidden',
     }}>
@@ -300,7 +300,7 @@ export default function AgentConfigPanel({ projectId, section, color, onClose }:
                   onClick={() => { setSoulText(config?.soul || ''); setSoulDirty(false) }}
                   style={{
                     padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 6,
-                    background: '#fff', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                    background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500, cursor: 'pointer',
                   }}
                 >
                   Discard
@@ -379,7 +379,7 @@ export default function AgentConfigPanel({ projectId, section, color, onClose }:
                 <button type="button" onClick={() => skillFileInputRef.current?.click()}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', border: '1px solid var(--border)',
-                    borderRadius: 5, background: '#fff', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                    borderRadius: 5, background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 500, cursor: 'pointer',
                   }}
                   title="Import .md skill file"
                 >
@@ -441,7 +441,7 @@ function SkillCard({ skill, color, readonly, onEdit, onDelete }: {
   return (
     <div style={{
       padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)',
-      marginBottom: 6, background: '#fff', transition: 'border-color 0.15s',
+      marginBottom: 6, background: 'var(--bg-card)', transition: 'border-color 0.15s',
     }}
       onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${color}40` }}
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}

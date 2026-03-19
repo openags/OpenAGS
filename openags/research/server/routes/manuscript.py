@@ -94,7 +94,11 @@ def _safe_path(ms_dir: Path, rel_path: str) -> Path:
 
 
 # Directories/files to hide from the manuscript file browser
-_HIDDEN_NAMES = {"agent", "sessions", ".build", ".versions", "memory.md"}
+_HIDDEN_NAMES = {
+    "agent", "sessions", "skills", ".build", ".versions", ".claude", ".openags",
+    "memory.md", "MEMORY.md", "SOUL.md", "CLAUDE.md", "AGENTS.md", "GEMINI.md",
+    "__pycache__", ".git",
+}
 
 
 def _build_tree(directory: Path, base: Path) -> list[FileEntry]:

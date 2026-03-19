@@ -316,7 +316,7 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
           style={{
             flex: 1, border: '1px solid var(--accent)', borderRadius: 4,
             padding: '2px 6px', fontSize: 11, outline: 'none',
-            background: '#fff', color: 'var(--text)',
+            background: 'var(--bg-card)', color: 'var(--text)',
             boxShadow: '0 0 0 2px rgba(79,110,247,0.1)',
           }}
         />
@@ -351,7 +351,7 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
             style={{
               flex: 1, border: '1px solid var(--accent)', borderRadius: 4,
               padding: '2px 6px', fontSize: 11, outline: 'none',
-              background: '#fff', color: 'var(--text)',
+              background: 'var(--bg-card)', color: 'var(--text)',
               boxShadow: '0 0 0 2px rgba(79,110,247,0.1)',
             }}
           />
@@ -541,7 +541,7 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
                 style={{
                   border: '1px solid var(--border)', borderRadius: 5,
                   padding: '3px 8px', fontSize: 11, cursor: 'pointer',
-                  background: '#fff', display: 'flex', alignItems: 'center', gap: 3,
+                  background: 'var(--bg-card)', display: 'flex', alignItems: 'center', gap: 3,
                   color: 'var(--text)',
                 }}>
                 <Save size={11} /> {t('manuscript.save')}
@@ -627,7 +627,10 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
             {activeTab && dirty[activeTab] && <span style={{ color: 'var(--yellow)' }}>● {t('manuscript.unsaved')}</span>}
             {compileLog && (
               <span style={{ cursor: 'pointer', color: 'var(--accent)' }}
-                    onClick={() => alert(compileLog)}>
+                    onClick={() => {
+                      const w = window.open('', 'compile-log', 'width=700,height=500')
+                      if (w) { w.document.write(`<pre style="font-size:12px;padding:16px;font-family:monospace">${compileLog}</pre>`); w.document.title = 'Compile Log' }
+                    }}>
                 {t('manuscript.viewLog')}
               </span>
             )}
@@ -663,7 +666,7 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
         <div
           style={{
             position: 'fixed', left: contextMenu.x, top: contextMenu.y,
-            background: '#fff', border: '1px solid var(--border)',
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
             borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
             zIndex: 1001, minWidth: 150, padding: 4,
           }}
@@ -712,7 +715,7 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
           zIndex: 2000,
         }} onClick={() => setDeleteConfirm(null)}>
           <div style={{
-            background: '#fff', borderRadius: 12, padding: '20px 24px',
+            background: 'var(--bg-card)', borderRadius: 12, padding: '20px 24px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.12)', minWidth: 300,
           }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--text)' }}>
@@ -727,7 +730,7 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
               <button onClick={() => setDeleteConfirm(null)}
                 style={{
                   padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)',
-                  background: '#fff', fontSize: 12, cursor: 'pointer', color: 'var(--text)',
+                  background: 'var(--bg-card)', fontSize: 12, cursor: 'pointer', color: 'var(--text)',
                 }}>
                 {t('manuscript.cancel')}
               </button>

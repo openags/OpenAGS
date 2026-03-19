@@ -123,7 +123,7 @@ export default function Logs(): React.ReactElement {
               padding: '7px 12px',
               border: '1px solid var(--border)',
               borderRadius: 8,
-              background: '#fff',
+              background: 'var(--bg-card)',
               cursor: 'pointer',
               fontSize: 12,
               fontWeight: 500,
@@ -170,7 +170,7 @@ export default function Logs(): React.ReactElement {
       <div
         ref={containerRef}
         style={{
-          background: '#fff',
+          background: 'var(--bg-card)',
           borderRadius: 'var(--radius)',
           border: '1px solid var(--border)',
           maxHeight: 'calc(100vh - 300px)',
@@ -276,7 +276,7 @@ function SummaryCard({
         padding: '14px 16px',
         borderRadius: 'var(--radius)',
         border: '1px solid var(--border)',
-        background: '#fff',
+        background: 'var(--bg-card)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>

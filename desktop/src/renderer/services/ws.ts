@@ -28,9 +28,7 @@ export class WSClient {
     const url = `${WS_URL}/ws/${this.projectId}`
     this.ws = new WebSocket(url)
 
-    this.ws.onopen = () => {
-      console.log(`[ws] Connected to ${this.projectId}`)
-    }
+    this.ws.onopen = () => { /* connected */ }
 
     this.ws.onmessage = (event) => {
       try {
@@ -42,18 +40,15 @@ export class WSClient {
         const wildcardHandlers = this.handlers.get('*') || []
         wildcardHandlers.forEach((h) => h(msg))
       } catch {
-        console.warn('[ws] Invalid message:', event.data)
+        /* invalid message */
       }
     }
 
     this.ws.onclose = () => {
-      console.log('[ws] Disconnected, reconnecting in 3s...')
       this.reconnectTimer = setTimeout(() => this.connect(), 3000)
     }
 
-    this.ws.onerror = (err) => {
-      console.error('[ws] Error:', err)
-    }
+    this.ws.onerror = () => { /* reconnect handles it */ }
   }
 
   disconnect(): void {

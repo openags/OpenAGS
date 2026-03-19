@@ -52,7 +52,7 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
       <div
         style={{
           width: 380,
-          background: '#fff',
+          background: 'var(--bg-card)',
           borderRadius: 16,
           padding: '40px 32px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',

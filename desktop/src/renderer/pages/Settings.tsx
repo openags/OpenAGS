@@ -22,7 +22,11 @@ import {
   Trash2,
   MonitorCheck,
   HardDrive,
+  Moon,
+  Sun,
 } from 'lucide-react'
+
+type SettingsTab = 'backend' | 'keys' | 'compute' | 'general'
 import { api } from '../services/api'
 import { useLocale } from '../services/i18n'
 
@@ -77,6 +81,77 @@ export default function Settings(): React.ReactElement {
   const [apiKeys, setApiKeys] = useState<ApiKeyEntry[]>([])
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
   const [customModelInput, setCustomModelInput] = useState('')
+
+  // CLI provider config (for Claude Code / Codex / Gemini)
+  interface CLIProviderConfig { provider: string; apiKey: string; model: string; baseUrl: string }
+  interface CLIPreset { id: string; name: string; color: string; category: string }
+  const [cliConfig, setCliConfig] = useState<CLIProviderConfig>({ provider: '', apiKey: '', model: '', baseUrl: '' })
+  const [cliPresets, setCliPresets] = useState<CLIPreset[]>([])
+  const [cliSaving, setCliSaving] = useState(false)
+  const [cliSaved, setCliSaved] = useState(false)
+  const [showCliKey, setShowCliKey] = useState(false)
+
+  const cliWsRef = React.useRef<WebSocket | null>(null)
+
+  // Load CLI config when backend type changes to a CLI backend
+  useEffect(() => {
+    const bt = backendType.value
+    if (!['claude_code', 'codex', 'gemini_cli'].includes(bt)) return
+
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const ws = new WebSocket(`${proto}//${window.location.host}/chat`)
+    cliWsRef.current = ws
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'read-cli-config', backend: bt }))
+    }
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data)
+      if (msg.type === 'cli-config') {
+        setCliConfig(msg.config)
+        setCliPresets(msg.presets || [])
+      }
+      if (msg.type === 'cli-config-saved') {
+        setCliSaving(false)
+        setCliSaved(true)
+        setTimeout(() => setCliSaved(false), 2000)
+      }
+    }
+    return () => { ws.close(); cliWsRef.current = null }
+  }, [backendType.value])
+
+  const saveCliConfig = () => {
+    if (!cliWsRef.current) return
+    setCliSaving(true)
+    cliWsRef.current.send(JSON.stringify({
+      type: 'write-cli-config',
+      backend: backendType.value,
+      config: cliConfig,
+    }))
+  }
+
+  const selectCliPreset = (presetId: string) => {
+    const preset = cliPresets.find(p => p.id === presetId)
+    if (!preset) return
+    setCliConfig(prev => ({
+      ...prev,
+      provider: presetId,
+      // Keep user's API key, update model/baseUrl from preset
+      ...(presetId === 'anthropic' || presetId === 'openai' || presetId === 'google'
+        ? { model: '', baseUrl: '' }
+        : {}),
+    }))
+  }
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>('backend')
+
+  // Theme
+  const [theme, setTheme] = useState(() => localStorage.getItem('openags-theme') || 'light')
+  const toggleTheme = (t: string) => {
+    setTheme(t)
+    localStorage.setItem('openags-theme', t)
+    document.documentElement.setAttribute('data-theme', t)
+  }
 
   // Compute section state
   interface GPUInfo { index: number; name: string; memory_total_mb: number; memory_free_mb: number; utilization_percent: number }
@@ -270,9 +345,15 @@ export default function Settings(): React.ReactElement {
     )
   }
 
+  const TABS: { key: SettingsTab; label: string; icon: typeof Server }[] = [
+    { key: 'backend', label: 'Backend', icon: Server },
+    { key: 'compute', label: 'Compute', icon: HardDrive },
+    { key: 'general', label: 'General', icon: Gauge },
+  ]
+
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 700, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+    <div style={{ padding: '28px 32px', maxWidth: 960, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--text)' }}>{t('settings.title')}</h2>
         {hasDirty && (
           <button type="button" onClick={() => void saveAllDirty()} disabled={saving !== null}
@@ -282,8 +363,32 @@ export default function Settings(): React.ReactElement {
         )}
       </div>
 
+      {/* Tab bar */}
+      <div style={{
+        display: 'flex', gap: 4, marginBottom: 20, padding: 4,
+        background: 'var(--bg-sidebar)', borderRadius: 10, border: '1px solid var(--border)',
+      }}>
+        {TABS.map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.key
+          return (
+            <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '8px 12px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                cursor: 'pointer', transition: 'all var(--transition)',
+                background: isActive ? 'var(--bg-card)' : 'transparent',
+                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+              }}>
+              <Icon size={14} /> {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* Backend Selection */}
-      <SettingsSection icon={Server} title={t('settings.backendSection')} color="#4f6ef7">
+      {activeTab === 'backend' && <SettingsSection icon={Server} title={t('settings.backendSection')} color="#4f6ef7">
         <SettingsField label={t('settings.backendType')} hint={t('settings.backendTypeHint')}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {BACKEND_TYPES.map((bt) => {
@@ -326,7 +431,7 @@ export default function Settings(): React.ReactElement {
         {/* Test Connection */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <button type="button" onClick={() => void testBackend()} disabled={testResult === 'testing'}
-            style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 12, fontWeight: 500, cursor: testResult === 'testing' ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text)' }}>
+            style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-card)', fontSize: 12, fontWeight: 500, cursor: testResult === 'testing' ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text)' }}>
             {testResult === 'testing' ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Wifi size={13} />}
             {t('settings.testConnection')}
           </button>
@@ -354,7 +459,7 @@ export default function Settings(): React.ReactElement {
 
               {modelDropdownOpen && (
                 <div onClick={(e) => e.stopPropagation()}
-                  style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: 320, overflowY: 'auto', marginTop: 4 }}>
+                  style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: 320, overflowY: 'auto', marginTop: 4 }}>
                   {MODEL_GROUPS.map((group) => (
                     <div key={group.provider}>
                       <div style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, background: 'var(--bg-sidebar)' }}>
@@ -421,56 +526,135 @@ export default function Settings(): React.ReactElement {
         )}
 
         {isCLIBackend && (
-          <div style={{ padding: '12px 16px', borderRadius: 8, background: `${selectedBackend.color}08`, border: `1px solid ${selectedBackend.color}20`, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>{selectedBackend.label} {t('settings.cliInfo')}</div>
-            {t('settings.cliDetail')}
+          <div style={{
+            padding: 16, borderRadius: 10, background: 'var(--bg-sidebar)',
+            border: '1px solid var(--border)', marginBottom: 0,
+          }}>
+            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 12, color: 'var(--text)' }}>
+              {selectedBackend.label} Provider
+            </div>
+
+            {/* Provider preset selector */}
+            {cliPresets.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Provider</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {cliPresets.map(p => (
+                    <button key={p.id} type="button" onClick={() => selectCliPreset(p.id)}
+                      style={{
+                        padding: '5px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+                        border: `1px solid ${cliConfig.provider === p.id ? p.color : 'var(--border)'}`,
+                        background: cliConfig.provider === p.id ? p.color + '15' : 'var(--bg-card)',
+                        color: cliConfig.provider === p.id ? p.color : 'var(--text-secondary)',
+                        fontWeight: cliConfig.provider === p.id ? 600 : 400,
+                      }}>
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* API Key */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>API Key</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type={showCliKey ? 'text' : 'password'}
+                  value={cliConfig.apiKey}
+                  onChange={e => setCliConfig(prev => ({ ...prev, apiKey: e.target.value }))}
+                  placeholder={backendType.value === 'claude_code' ? 'ANTHROPIC_AUTH_TOKEN' : 'API Key'}
+                  style={{
+                    flex: 1, padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6,
+                    fontSize: 12, outline: 'none', background: 'var(--bg-input)', color: 'var(--text)',
+                  }}
+                />
+                <button type="button" onClick={() => setShowCliKey(!showCliKey)}
+                  style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', borderRadius: 6, padding: '0 8px', cursor: 'pointer', color: 'var(--text-tertiary)' }}>
+                  {showCliKey ? <EyeOff size={13} /> : <Eye size={13} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Model (optional override) */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Model (optional override)</label>
+              <input
+                value={cliConfig.model}
+                onChange={e => setCliConfig(prev => ({ ...prev, model: e.target.value }))}
+                placeholder={backendType.value === 'claude_code' ? 'claude-sonnet-4-6' : backendType.value === 'codex' ? 'gpt-4o' : 'gemini-2.5-flash'}
+                style={{
+                  width: '100%', padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6,
+                  fontSize: 12, outline: 'none', background: 'var(--bg-input)', color: 'var(--text)',
+                }}
+              />
+            </div>
+
+            {/* Base URL (for custom providers) */}
+            {backendType.value !== 'gemini_cli' && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Base URL (custom provider only)</label>
+                <input
+                  value={cliConfig.baseUrl}
+                  onChange={e => setCliConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
+                  placeholder="https://api.anthropic.com"
+                  style={{
+                    width: '100%', padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6,
+                    fontSize: 12, outline: 'none', background: 'var(--bg-input)', color: 'var(--text)',
+                    fontFamily: 'monospace',
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Save button */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button type="button" onClick={saveCliConfig} disabled={cliSaving}
+                style={{
+                  padding: '7px 16px', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                  background: selectedBackend.color, color: '#fff', cursor: cliSaving ? 'not-allowed' : 'pointer',
+                }}>
+                {cliSaving ? 'Saving...' : `Save to ${backendType.value === 'claude_code' ? '~/.claude.json' : backendType.value === 'codex' ? '~/.codex/config.toml' : '~/.gemini/settings.json'}`}
+              </button>
+              {cliSaved && <span style={{ fontSize: 12, color: 'var(--green)' }}>Saved!</span>}
+            </div>
+
+            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-tertiary)' }}>
+              Config is written directly to {backendType.value === 'claude_code' ? 'Claude Code' : backendType.value === 'codex' ? 'Codex' : 'Gemini CLI'}&apos;s own config file. Changes take effect on next session.
+            </div>
           </div>
         )}
 
-        <SettingsField label={t('settings.timeout')}>
-          <SettingsInput value={timeout.value} onChange={(v) => setTimeout({ ...timeout, value: v, dirty: true })} onSave={() => void saveField(timeout, setTimeout)} saving={saving === timeout.key} dirty={timeout.dirty} placeholder="120" type="number" />
-        </SettingsField>
-      </SettingsSection>
-
-      {/* API Keys */}
-      <SettingsSection icon={Key} title={t('settings.apiKeysSection')} color="#f59e0b">
-        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 14, lineHeight: 1.5 }}>{t('settings.apiKeysHint')}</div>
-        {apiKeys.map((entry, idx) => {
-          const providerInfo = API_KEY_PROVIDERS.find((p) => p.provider === entry.provider)
-          const isVisible = showApiKeys[entry.provider] || false
-          return (
-            <SettingsField key={entry.provider} label={entry.provider} hint={entry.envVar}>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <div style={{ flex: 1, position: 'relative' }}>
-                  <input type={isVisible ? 'text' : 'password'} value={entry.value}
-                    onChange={(e) => setApiKeys((prev) => prev.map((k, i) => i === idx ? { ...k, value: e.target.value, dirty: true } : k))}
-                    onKeyDown={(e) => { if (e.key === 'Enter') void saveAllDirty() }}
-                    placeholder={providerInfo?.placeholder || 'Enter API key...'}
-                    style={{ width: '100%', padding: '8px 36px 8px 10px', border: `1px solid ${entry.dirty ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 6, fontSize: 13, outline: 'none', background: 'var(--bg-input)', color: 'var(--text)', fontFamily: 'monospace', transition: 'border-color var(--transition)' }} />
-                  <button type="button" onClick={() => setShowApiKeys((prev) => ({ ...prev, [entry.provider]: !prev[entry.provider] }))}
-                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 0, display: 'flex' }}>
-                    {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-                <SaveButton dirty={entry.dirty} saving={saving === `api_key_${entry.provider}`}
-                  onClick={async () => {
-                    if (!entry.dirty || !entry.value.trim()) return
-                    setSaving(`api_key_${entry.provider}`)
-                    try {
-                      await api.put('/api/config/', { key: `backends.${entry.provider.toLowerCase()}.api_key`, value: entry.value })
-                      setApiKeys((prev) => prev.map((k, i) => i === idx ? { ...k, dirty: false } : k))
-                      message.success(`Saved ${entry.provider} API key`)
-                    } catch { message.error(`Failed to save ${entry.provider} key`) }
-                    setSaving(null)
-                  }} />
-              </div>
-            </SettingsField>
-          )
-        })}
-      </SettingsSection>
+        {!isCLIBackend && (
+          <SettingsField label={t('settings.timeout')}>
+            <SettingsInput value={timeout.value} onChange={(v) => setTimeout({ ...timeout, value: v, dirty: true })} onSave={() => void saveField(timeout, setTimeout)} saving={saving === timeout.key} dirty={timeout.dirty} placeholder="120" type="number" />
+          </SettingsField>
+        )}
+      </SettingsSection>}
 
       {/* General */}
-      <SettingsSection icon={Gauge} title={t('settings.generalSection')} color="#22c55e">
+      {activeTab === 'general' && <SettingsSection icon={Gauge} title={t('settings.generalSection')} color="#22c55e">
+        <SettingsField label={t("settings.theme")}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+            ].map(opt => (
+              <button key={opt.value} type="button" onClick={() => toggleTheme(opt.value)}
+                style={{
+                  padding: '6px 14px',
+                  border: `1px solid ${theme === opt.value ? 'var(--accent)' : 'var(--border)'}`,
+                  borderRadius: 6,
+                  background: theme === opt.value ? 'var(--accent)' : 'transparent',
+                  color: theme === opt.value ? '#fff' : 'var(--text-secondary)',
+                  fontSize: 12, fontWeight: theme === opt.value ? 600 : 400,
+                  cursor: 'pointer', transition: 'all var(--transition)',
+                }}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </SettingsField>
         <SettingsField label={t('settings.language')} hint={t('settings.languageHint')}>
           <div style={{ display: 'flex', gap: 6 }}>
             {LOCALES.map((loc) => (
@@ -498,12 +682,12 @@ export default function Settings(): React.ReactElement {
         <SettingsField label={t('settings.tokenBudget')} hint={t('settings.tokenBudgetHint')}>
           <SettingsInput value={tokenBudget.value} onChange={(v) => setTokenBudget({ ...tokenBudget, value: v, dirty: true })} onSave={() => void saveField(tokenBudget, setTokenBudget)} saving={saving === tokenBudget.key} dirty={tokenBudget.dirty} placeholder="No limit" type="number" />
         </SettingsField>
-      </SettingsSection>
+      </SettingsSection>}
 
       {/* ── Compute & Servers ────────────────────────── */}
-      <SettingsSection icon={HardDrive} title="Compute & Servers" color="#0891b2">
+      {activeTab === 'compute' && <SettingsSection icon={HardDrive} title={t('compute.title')} color="#0891b2">
         {/* Local GPU */}
-        <SettingsField label="Local GPU">
+        <SettingsField label={t("compute.localGpu")}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             {gpuLoading ? (
               <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Detecting...</span>
@@ -513,7 +697,7 @@ export default function Settings(): React.ReactElement {
               <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>○ No GPU detected (CPU only)</span>
             )}
             <button type="button" onClick={() => void fetchGpus()} style={{
-              border: '1px solid var(--border)', background: '#fff', borderRadius: 6, padding: '3px 8px',
+              border: '1px solid var(--border)', background: 'var(--bg-card)', borderRadius: 6, padding: '3px 8px',
               fontSize: 11, cursor: 'pointer', color: 'var(--text-secondary)',
             }}>Refresh</button>
           </div>
@@ -535,13 +719,13 @@ export default function Settings(): React.ReactElement {
         </SettingsField>
 
         {/* Remote Servers */}
-        <SettingsField label="Remote Servers" hint="SSH servers for running experiments">
+        <SettingsField label={t('compute.remoteServers')} hint={t('compute.remoteServersHint')}>
           {servers.map(s => {
             const test = serverTestResults[s.name] || { status: 'idle' }
             return (
               <div key={s.name} style={{
                 padding: '10px 12px', marginBottom: 8, borderRadius: 8,
-                border: '1px solid var(--border)', background: '#fff',
+                border: '1px solid var(--border)', background: 'var(--bg-card)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                   <Server size={13} color="#0891b2" />
@@ -566,14 +750,14 @@ export default function Settings(): React.ReactElement {
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button type="button" onClick={() => void testServer(s.name)} disabled={test.status === 'testing'}
                     style={{
-                      border: '1px solid var(--border)', background: '#fff', borderRadius: 6,
+                      border: '1px solid var(--border)', background: 'var(--bg-card)', borderRadius: 6,
                       padding: '4px 10px', fontSize: 11, cursor: 'pointer', color: 'var(--text-secondary)',
                     }}>
                     {test.status === 'testing' ? 'Testing...' : 'Test Connection'}
                   </button>
                   <button type="button" onClick={() => void deleteServer(s.name)}
                     style={{
-                      border: '1px solid #fecaca', background: '#fff', borderRadius: 6,
+                      border: '1px solid #fecaca', background: 'var(--bg-card)', borderRadius: 6,
                       padding: '4px 10px', fontSize: 11, cursor: 'pointer', color: '#ef4444',
                     }}>
                     <Trash2 size={10} /> Delete
@@ -614,7 +798,7 @@ export default function Settings(): React.ReactElement {
                   }}>Save</button>
                 <button type="button" onClick={() => setShowAddServer(false)}
                   style={{
-                    border: '1px solid var(--border)', background: '#fff', borderRadius: 6,
+                    border: '1px solid var(--border)', background: 'var(--bg-card)', borderRadius: 6,
                     padding: '6px 14px', fontSize: 12, cursor: 'pointer', color: 'var(--text-secondary)',
                   }}>Cancel</button>
               </div>
@@ -623,7 +807,7 @@ export default function Settings(): React.ReactElement {
             <button type="button" onClick={() => setShowAddServer(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 4, border: '1px dashed var(--border)',
-                background: '#fff', borderRadius: 6, padding: '6px 12px', fontSize: 12,
+                background: 'var(--bg-card)', borderRadius: 6, padding: '6px 12px', fontSize: 12,
                 cursor: 'pointer', color: 'var(--text-secondary)', marginTop: 4,
               }}>
               <Plus size={12} /> Add Server
@@ -632,7 +816,7 @@ export default function Settings(): React.ReactElement {
         </SettingsField>
 
         {/* Default Execution Mode */}
-        <SettingsField label="Default Execution Mode" hint="Where experiments run by default">
+        <SettingsField label={t('compute.defaultExecution')} hint={t('compute.executionHint')}>
           <div style={{ display: 'flex', gap: 6 }}>
             {[
               { value: 'local', label: 'Local', icon: MonitorCheck },
@@ -653,7 +837,7 @@ export default function Settings(): React.ReactElement {
             ))}
           </div>
         </SettingsField>
-      </SettingsSection>
+      </SettingsSection>}
 
       <div style={{ padding: '16px 20px', borderRadius: 'var(--radius)', background: 'var(--bg-sidebar)', border: '1px solid var(--border-light)', fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
@@ -667,7 +851,7 @@ export default function Settings(): React.ReactElement {
 
 function SettingsSection({ icon: Icon, title, color, children }: { icon: typeof Settings2; title: string; color: string; children: React.ReactNode }): React.ReactElement {
   return (
-    <div style={{ background: '#fff', borderRadius: 'var(--radius)', border: '1px solid var(--border)', padding: '20px 24px', marginBottom: 16 }}>
+    <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', padding: '20px 24px', marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: color + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon size={16} color={color} strokeWidth={2} />

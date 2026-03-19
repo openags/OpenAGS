@@ -40,8 +40,9 @@ class TestRegistry:
         assert "file_list" in names
         assert "file_search" in names
         assert "bash_execute" in names
-        # 8 real tools + 6 aliases = 14 entries
-        assert len(names) == 14
+        assert "fetch" in names
+        # 9 real tools + 6 aliases = 15 entries
+        assert len(names) == 15
 
     def test_different_projects_get_different_registries(self, tmp_path: Path) -> None:
         ws1 = tmp_path / "project1"
@@ -67,7 +68,7 @@ class TestRegistry:
     def test_openai_tools_format(self, tmp_path: Path) -> None:
         reg = create_research_registry(tmp_path)
         tools = reg.to_openai_tools()
-        assert len(tools) == 14  # 8 tools + 6 aliases
+        assert len(tools) == 15  # 9 tools + 6 aliases
         for tool in tools:
             assert tool["type"] == "function"
             assert "name" in tool["function"]

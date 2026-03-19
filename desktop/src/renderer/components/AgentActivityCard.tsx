@@ -142,9 +142,8 @@ export default function AgentActivityCard({ projectId, active, color = '#4f6ef7'
     setCollapsed(false)
     setCurrentRole('')
 
-    const wsUrl = typeof window !== 'undefined' && (window as any).openags
-      ? (window as any).openags.getWsUrl()
-      : 'ws://127.0.0.1:19836'
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${proto}//${window.location.host}`
 
     let ws: WebSocket
     try {

@@ -231,7 +231,7 @@ def chat(
         system_prompt += f"\n\n## Current Project Context\n{context}"
 
     # Session resume support (Phase 8)
-    from openags.core.session import SessionManager
+    from openags.agent.session import SessionManager
     session_mgr = SessionManager(module_dir if agent_config.mode != "root" else proj.workspace / ".openags")
     chat_messages: list[dict[str, str]] = []
     total_tokens_in = 0
