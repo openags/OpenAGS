@@ -245,7 +245,8 @@ Thumbs.db
 # ===========================
 learnfrom3rd_ref_repo.md
 
-docs/# Byte-compiled / optimized / DLL files
+docs/_build/
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
@@ -492,4 +493,3 @@ Thumbs.db
 # ===========================
 learnfrom3rd_ref_repo.md
 
-docs/
