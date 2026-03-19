@@ -1,4 +1,0 @@
-camel-ai
-google-adk
-openai-agents
-sqlite3

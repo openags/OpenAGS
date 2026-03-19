@@ -1,123 +1,332 @@
-# Auto-Research
-Autonomous Generalist Scientist: Towards and Beyond Human-Level Scientific Research with Agentic and Embodied AI and Robots.
+<div align="center">
 
-The accelerating pace of scientific research highlights the need for more efficient, accurate, and comprehensive methodologies. Traditional research methods are often hindered by the limitations of manual experimentation and data collection in isolated environments, resulting in slow and resource-intensive processes. Besides, multidisciplinary research presents significant challenges due to the complexities of integrating knowledge from various fields, often surpassing the expertise of individual researchers. The limited knowledge base of single researchers constrains the scope and depth of inquiry, complicating efforts to fully explore complex interdisciplinary problems.
-To address these challenges, it is crucial to develop automatic systems that can dynamically interact with both physical and virtual environments while facilitating the integration of knowledge across multiple disciplines. 
-Foundation AI models, such as large language models, are trained on vast amount of data from diverse sources, enabling them to acquire knowledge across various scientific disciplines. Therefore, it is promising to build the generalist AI robot scientist for autonomous research based on these foundation models and robot technologies.
+# OpenAGS
 
-<p align="center">
-  <img src="docs/images/web-ui.png" alt="UI">
+**Open Autonomous Generalist Scientist**
+
+An open-source framework for fully autonomous scientific research — from literature review to manuscript writing.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776ab.svg)](https://python.org)
+[![Node.js 18+](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org)
+
+[Getting Started](#quick-start) &bull; [Architecture](#architecture) &bull; [Documentation](docs/architecture.md) &bull; [Citation](#citation)
+
+</div>
+
+---
+
+OpenAGS orchestrates a team of AI agents that collaborate across the full research lifecycle — literature review, hypothesis generation, experiments, manuscript writing, and peer review. One framework, end-to-end, fully autonomous.
+
+<div align="center">
+  <img src="docs/images/OpenAGS-Desktop1.jpg" alt="OpenAGS Desktop" width="720">
   <br>
-  <em>UI</em>
-</p>
+  <sub>OpenAGS Desktop — Multi-agent research workspace with integrated LaTeX editor</sub>
+</div>
 
+<br>
 
-## Overview
-
-The Autonomous Generalist Scientist （AI Scientist） project aims to revolutionize the academic research process by introducing a framework for fully automated research agents/robots. This initiative seeks to integrate artificial intelligence into every stage of research—from literature reviews to proposal, experiment, writing, submitting, reviewing manuscripts. Our vision is to facilitate a seamless research workflow that enhances productivity and fosters innovation in scientific inquiry. Here’s how we envision the integration of automated agents and robotics evolving within the framework:
-
-<p align="center">
-  <img src="docs/images/ags_framework.jpg" alt="Framework and Vision">
+<div align="center">
+  <img src="docs/images/ags_framework.jpg" alt="AGS Framework" width="660">
   <br>
-  <em>Auto Research Agents framework and vision</em>
-</p>
+  <sub>Autonomous Generalist Scientist — Framework and Vision</sub>
+</div>
 
-Phase 1: Software-Only Agents
-Initially, the project will focus on software-only agents that can perform tasks not requiring physical interaction with the real world. 
+---
 
-Phase 2: Integration of Robotics
-As the project matures and the capabilities of our agents evolve, we plan to introduce robotics to carry out physical tasks and experiments in the laboratory. 
+## Highlights
 
+<table>
+<tr>
+<td width="50%">
 
-<p align="center">
-  <img src="docs/images/ags_timeline.jpg" alt="Futrue timeline">
-  <br>
-  <em>Auto Research Timeline</em>
-</p>
+**Folder = Agent**
+Each directory with a `SOUL.md` is an independent agent. Create new agents by simply adding a folder — no code required.
 
-## Directory Structure
+**Multi-Backend**
+Use the builtin agent (100+ LLMs via LiteLLM), or plug in Claude Code, Codex, Cursor, or Gemini CLI as backends.
 
-- `gscientist/`: The main directory containing the core components of Auto-Research.
-  - `agents/`: Contains the agent implementations.
-  - `server/`: Hosts the backend API and server-related code.
-  - `tools/`: Utility scripts and built-in tools.
-  - Other modules such as `project_manager.py` and `__init__.py` reside here.
-- `ui/`: User interface assets.
-  - `frontend/`: Web UI assets.
-  - `qt/`: (Optional) Desktop UI components built with PyQt or PySide6.
-- `config/`: Configuration files (e.g., `config.yml`).
-- `docs/`: Documentation files and guides.
-- `tests/`: Unit and integration tests.
-- Root-level files:
-  - `start.py`: Entry point to run both backend and frontend servers.
-  - `setup.py`, `requirements.txt`, `.gitignore`, `LICENSE`, and this `README.md`.
+**Unified Skills**
+Claude Code compatible `SKILL.md` format. Skills auto-discovered across all backends via symlinks.
 
-## Getting Started
+</td>
+<td width="50%">
 
-### Install Dependencies
-Ensure you have Python 3.8 or later installed. Then install the required packages:
+**Browser + Desktop**
+Same React UI runs in a browser (`localhost:3001`) or as an Electron app. All communication via WebSocket — no IPC.
+
+**LaTeX Editor**
+Built-in manuscript editor with syntax highlighting, file browser, and one-click PDF compilation (pdflatex / xelatex / tectonic).
+
+**Compute Management**
+Run experiments locally, in Docker containers, or on remote GPU servers via SSH — all configurable from the UI.
+
+</td>
+</tr>
+</table>
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+| Dependency | Version | Required For |
+|------------|---------|-------------|
+| Python | >= 3.11 | Backend |
+| [uv](https://docs.astral.sh/uv/) | latest | Python package manager |
+| Node.js | >= 18 | UI (Desktop / Browser) |
+| pnpm | >= 8 | UI (Desktop / Browser) |
+| TeX Live / BasicTeX | any | LaTeX compilation (optional) |
+
+### Install
+
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/openags/OpenAGS.git
+cd OpenAGS
+uv sync
 ```
 
-### Configure the Project
-Copy the template configuration file and adjust it as needed:
-```bash
-copy config\config_template.yml config\config.yml
-```
-(On Windows, you may also use xcopy or copy manually via the file explorer.)
+Configure your LLM provider:
 
-### Initialize the Project
-The project manager automatically creates the database (research_projects.db) in the project root when you create a project.
-
-### Run the Application
-Start both the backend and frontend servers by running:
 ```bash
-python start.py
-```
-You can then access:
-- The FastAPI server at http://localhost:8000
-- The frontend UI at http://localhost:8080
+# DeepSeek (recommended for cost efficiency)
+uv run openags config default_backend.model deepseek/deepseek-chat
+uv run openags config default_backend.api_key sk-your-key
 
-### Run Tests
-To run the unit and integration tests, execute:
-```bash
-pytest
+# Or: OpenAI, Anthropic, Google, Ollama, OpenRouter, etc.
 ```
 
-### Contributions
-Contributions are welcome! To help improve the project, please follow these guidelines:
+### Launch
 
-#### Reporting Issues
-Use the GitHub issue tracker to report bugs or request enhancements.
+```bash
+# Desktop app (Electron)
+cd desktop && pnpm install && pnpm dev
 
-#### Submitting Pull Requests
-- Fork the repository and create a new branch for your feature or bug fix.
-- Ensure your changes adhere to the project’s coding standards.
-- Add or update documentation as needed.
-- Submit a pull request with a clear description of your changes.
+# Browser mode (no Electron required)
+cd desktop && pnpm build && pnpm serve    # → http://localhost:3001
 
-#### Discussion and Community
-Join our Discord server for discussions, or check our Outline Google Doc for project ideas and planning.
-For detailed guidelines, please refer to the Contribution Guide.
+# CLI only
+uv run openags init my-project --name "My Research"
+uv run openags chat my-project
+```
+
+The desktop app starts the Python backend automatically.
+
+---
+
+## Architecture
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  React UI (browser + Electron)                                  │
+│  Chat │ Terminal (xterm.js) │ Manuscript Editor │ Settings       │
+└──────────────────────┬─────────────────────────────────────────┘
+                       │ WebSocket + HTTP
+┌──────────────────────▼─────────────────────────────────────────┐
+│  Node.js Server (Express)                                       │
+│  /chat  → Claude SDK, Codex SDK, Cursor CLI, Gemini CLI         │
+│  /shell → PTY Terminal (node-pty)                                │
+│  /api/* → Proxy to Python backend                                │
+└──────────────────────┬─────────────────────────────────────────┘
+                       │ HTTP
+┌──────────────────────▼─────────────────────────────────────────┐
+│  Python Backend (FastAPI)                                        │
+│  Orchestrator → Agent Loop → Skills → Tools → Memory             │
+│  Projects, Sessions, Experiments, Manuscript, GPU, Config         │
+└──────────────────────┬─────────────────────────────────────────┘
+                       │
+┌──────────────────────▼─────────────────────────────────────────┐
+│  External Services                                               │
+│  LLM APIs │ arXiv │ Semantic Scholar │ Docker │ SSH │ OS          │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### How Agents Communicate
+
+Agents communicate through files — the only mechanism that works across all backends (builtin, Claude Code, Codex, etc.):
+
+| Agent | Reads from upstream | Writes |
+|-------|-------------------|--------|
+| **Literature** | `../CLAUDE.md`, `../uploads/` | `notes/`, `memory.md` |
+| **Proposal** | `../literature/notes/` | `ideas/proposal.md` |
+| **Experiments** | `../proposal/ideas/`, `../literature/notes/` | `code/`, `results/`, `data/` |
+| **Manuscript** | All upstream results + figures | `main.tex`, `references.bib` |
+| **Review** | `../manuscript/main.tex`, `../experiments/results/` | `reviews/` |
+
+---
+
+## Project Structure
+
+```
+OpenAGS/
+│
+├── openags/                       # Python package
+│   ├── agent/                     # Agent engine (standalone, zero dependency on research/)
+│   │   ├── loop.py                #   Agent class — step() / loop()
+│   │   ├── llm.py                 #   LLM transport (litellm)
+│   │   ├── memory.py              #   Dual-layer memory (memory.md + history.md)
+│   │   ├── session.py             #   Session persistence (JSONL)
+│   │   ├── soul.py                #   SOUL.md parser
+│   │   ├── skills/                #   Skill engine (SKILL.md, Claude Code compatible)
+│   │   └── tools/                 #   Tool registry (read, write, bash, sub_agent, mcp, ...)
+│   │
+│   ├── research/                  # Research application layer
+│   │   ├── orchestrator.py        #   Central orchestrator (builtin agent only)
+│   │   ├── adapter.py             #   SOUL.md → CLAUDE.md / AGENTS.md sync
+│   │   ├── project.py             #   Project CRUD
+│   │   ├── templates.py           #   Project templates (with upstream dependency prompts)
+│   │   ├── config.py              #   Config loading / saving
+│   │   ├── backend/               #   RuntimeRouter (builtin LLMBackend)
+│   │   ├── experiment/            #   Sandbox (Local / Docker / SSH) + auto-fix engine
+│   │   ├── server/routes/         #   FastAPI routes (15 route modules)
+│   │   ├── tools/                 #   Research tools (arXiv, Semantic Scholar, GPU, ...)
+│   │   └── messaging/             #   IM notifications (Telegram, Discord, Feishu)
+│   │
+│   ├── models.py                  # Shared Pydantic models
+│   └── main.py                    # CLI entry point (Typer)
+│
+├── desktop/                       # Node.js server + React frontend
+│   ├── src/main/
+│   │   ├── server.ts              #   Express + WebSocket (PTY, Chat, API proxy)
+│   │   ├── index.ts               #   Entry point (--serve for browser, or Electron)
+│   │   ├── python-backend.ts      #   Python backend lifecycle
+│   │   └── providers/             #   CLI agent integrations
+│   │       ├── claude-sdk.ts      #     @anthropic-ai/claude-agent-sdk
+│   │       ├── codex-sdk.ts       #     @openai/codex-sdk
+│   │       ├── cursor-cli.ts      #     subprocess + stream-json
+│   │       ├── gemini-cli.ts      #     subprocess + stream-json + session ID mapping
+│   │       └── adapter.ts         #     Config sync + skill symlinks
+│   │
+│   └── src/renderer/              # React UI (shared by browser + Electron)
+│       ├── pages/
+│       │   ├── Project.tsx        #   Main workspace (Chat + Terminal + Manuscript)
+│       │   ├── Settings.tsx       #   Backend, API keys, Compute & Servers
+│       │   └── Dashboard.tsx      #   Project overview
+│       ├── components/
+│       │   ├── TerminalPanel.tsx   #   Embedded terminal (xterm.js + WebSocket)
+│       │   ├── ManuscriptEditor.tsx#   LaTeX editor + PDF compiler
+│       │   └── ProjectConfig.tsx  #   Per-project settings (compute, GPU, timeout)
+│       └── services/
+│           ├── api.ts             #   REST client (relative URLs, proxied)
+│           ├── ws.ts              #   WebSocket client
+│           └── chat_threads.ts    #   Chat persistence (localStorage + providerSessionId)
+│
+├── skills/                        # Skill definitions (SKILL.md format)
+│   ├── search-papers/SKILL.md     #   Paper search skill
+│   ├── verify-citations/SKILL.md  #   Citation verification
+│   ├── research-workflow/SKILL.md #   Research pipeline
+│   └── agents/                    #   Default agent SOUL.md templates
+│
+├── tests/                         # pytest test suite (330+ tests)
+├── docs/                          # Architecture docs + images
+└── pyproject.toml                 # Python project metadata
+```
+
+---
+
+## Configuration
+
+Stored at `~/.openags/config.yaml`:
+
+```yaml
+default_backend:
+  type: builtin                    # builtin | claude_code | codex | gemini_cli
+  model: deepseek/deepseek-chat    # any LiteLLM model
+  api_key: sk-xxx
+  timeout: 300
+
+experiment_sandbox: local          # local | docker | remote
+remote_servers:
+  - name: gpu-server
+    host: 10.0.1.50
+    user: research
+    key_file: ~/.ssh/id_rsa
+    gpus: [0, 1, 2, 3]
+```
+
+All settings are also configurable from the UI (Settings page + Project Config).
+
+## Supported Providers
+
+<details>
+<summary><b>LLM Providers (via LiteLLM — 100+ supported)</b></summary>
+
+| Provider | Models | Prefix |
+|----------|--------|--------|
+| DeepSeek | `deepseek/deepseek-chat`, `deepseek/deepseek-reasoner` | `deepseek/` |
+| OpenAI | `gpt-4o`, `gpt-4o-mini`, `o3-mini` | — |
+| Anthropic | `claude-sonnet-4-6`, `claude-opus-4-6` | — |
+| Google | `gemini-2.5-pro`, `gemini-2.0-flash` | — |
+| OpenRouter | `openrouter/auto` | `openrouter/` |
+| Ollama | `ollama/llama3`, `ollama/qwen2` | `ollama/` |
+
+</details>
+
+<details>
+<summary><b>CLI Agent Backends (via Node.js SDK/subprocess)</b></summary>
+
+| Backend | Integration | Session Resume |
+|---------|------------|----------------|
+| Claude Code | `@anthropic-ai/claude-agent-sdk` | `--resume sessionId` |
+| Codex | `@openai/codex-sdk` | `codex resume sessionId` |
+| Cursor | subprocess + `stream-json` | `--resume=sessionId` |
+| Gemini CLI | subprocess + `stream-json` | `--resume cliSessionId` |
+
+</details>
+
+---
+
+## Development
+
+```bash
+# Python
+uv sync                              # install dependencies
+uv run pytest tests/ -v              # run tests (330+)
+uv run ruff check openags/           # lint
+uv run ruff format openags/          # format
+
+# Desktop
+cd desktop
+pnpm install && pnpm dev             # dev mode with hot-reload
+pnpm build                           # production build
+```
+
+---
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=universea/Auto-Research&type=Date)](https://star-history.com/#universea/Auto-Research&Date)
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/svg?repos=openags/OpenAGS&type=Date)](https://star-history.com/#openags/OpenAGS&Date)
+
+</div>
 
 ## Citation
-```
+
+If you use OpenAGS in your research, please cite:
+
+```bibtex
 @article{zhang2025scaling,
-  title={Scaling Laws in Scientific Discovery with AI and Robot Scientists},
-  author={Zhang, Pengsong and Zhang, Heng and Xu, Huazhe and Xu, Renjun and Wang, Zhenting and Wang, Cong and Garg, Animesh and Li, Zhibin and Ajoudani, Arash and Liu, Xinyu},
-  journal={arXiv preprint arXiv:2503.22444},
-  year={2025}
+  title   = {Scaling Laws in Scientific Discovery with AI and Robot Scientists},
+  author  = {Zhang, Pengsong and Zhang, Heng and Xu, Huazhe and Xu, Renjun and
+             Wang, Zhenting and Wang, Cong and Garg, Animesh and Li, Zhibin and
+             Ajoudani, Arash and Liu, Xinyu},
+  journal = {arXiv preprint arXiv:2503.22444},
+  year    = {2025}
 }
 
 @article{zhangautonomous,
-  title={Autonomous Generalist Scientist: Towards and Beyond Human-Level Scientific Research with Agentic and Embodied AI and Robots},
-  author={Zhang, Pengsong and Zhang, Heng and Xu, Huazhe and Xu, Renjun and Wang, Zhenting and Wang, Cong and Garg, Animesh and Li, Zhibin and Liu, Xinyu and Ajoudani, Arash},
-  journal={ResearchGate preprint RG.2.2.35148.01923},
-  year={2024}  
+  title   = {Autonomous Generalist Scientist: Towards and Beyond Human-Level
+             Scientific Research with Agentic and Embodied AI and Robots},
+  author  = {Zhang, Pengsong and Zhang, Heng and Xu, Huazhe and Xu, Renjun and
+             Wang, Zhenting and Wang, Cong and Garg, Animesh and Li, Zhibin and
+             Liu, Xinyu and Ajoudani, Arash},
+  journal = {ResearchGate preprint RG.2.2.35148.01923},
+  year    = {2024}
 }
 ```
+
+## License
+
+[MIT](LICENSE)
