@@ -12,7 +12,6 @@ import yaml
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from openags.agent.discovery import AgentDiscovery
 from openags.agent.soul import parse_soul
 from openags.agent.errors import ProjectError
 from openags.research.orchestrator import Orchestrator

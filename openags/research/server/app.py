@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,7 +30,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="OpenAGS",
         description="Open Autonomous Generalist Scientist API",
-        version="0.2.0",
+        version="0.0.1",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url="/redoc",
@@ -91,13 +90,13 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     async def health() -> dict[str, str]:
-        return {"status": "ok", "version": "0.1.0"}
+        return {"status": "ok", "version": "0.0.1"}
 
     @app.get("/")
     async def root() -> dict[str, str]:
         return {
             "name": "OpenAGS API",
-            "version": "0.1.0",
+            "version": "0.0.1",
             "docs": "/docs",
             "ui": "http://localhost:3001",
         }

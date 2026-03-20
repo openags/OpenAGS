@@ -18,7 +18,6 @@ from openags.research.project import ProjectManager
 from openags.agent.session import SessionManager
 from openags.research.logging.tracker import TokenTracker
 from openags.models import (
-    AgentConfig,
     AgentResult,
     BackendResponse,
     BusMessage,
@@ -58,11 +57,18 @@ class Orchestrator:
         # Tool registries: per-project (workspace-scoped file tools)
         self._tool_registries: dict[str, ToolRegistry] = {}
 
-        # Skill engine: load skills from global + workspace dirs
+        # Skill engine: load skills from global + workspace + plugins
         skill_dirs: list[Path] = [Path("skills")]
         project_skills = config.workspace_dir / "skills"
         if project_skills.exists():
             skill_dirs.append(project_skills)
+
+        # Load plugin skills
+        from openags.agent.plugins import PluginManager
+        self._plugin_mgr = PluginManager(config.workspace_dir / "plugins")
+        self._plugin_mgr.discover()
+        skill_dirs.extend(self._plugin_mgr.get_skill_dirs())
+
         self._skill_engine = SkillEngine(skill_dirs)
 
         # MCP: load external tool servers and register to ToolRegistry
@@ -298,10 +304,15 @@ class Orchestrator:
         logger.info("Running agent[%s] on project '%s' (runtime=%s)",
                      agent_name, project_id, self._runtime.runtime_type)
 
-        # OpenAGS Agent — full loop with tools, memory, skills
-        # (CLI agents like Claude Code / Codex are handled by the Desktop Node.js layer)
-        agent = self._get_or_create_agent(agent_name, project)
-        result = await agent.loop(task)
+        backend_type = self._runtime.runtime_type
+
+        if backend_type == "builtin":
+            # Path 1: OpenAGS builtin agent — full loop with tools, memory, skills
+            agent = self._get_or_create_agent(agent_name, project)
+            result = await agent.loop(task)
+        else:
+            # Path 2: CLI agent — spawn CLI process in the agent's folder
+            result = await self._run_cli_agent(project, agent_name, task)
 
         # Write checkpoint after agent completes
         self._write_checkpoint(project, agent_name, task, result)
@@ -350,6 +361,43 @@ class Orchestrator:
                 )
 
         return result
+
+    async def run_agents_parallel(
+        self,
+        project_id: str,
+        agents: list[dict[str, str]],
+    ) -> list[AgentResult]:
+        """Run multiple agents in parallel.
+
+        Args:
+            project_id: Project identifier
+            agents: List of {"agent": "name", "task": "description"}
+
+        Returns:
+            List of AgentResults in the same order as input
+        """
+        import asyncio as _asyncio
+
+        tasks = [
+            self.run_agent(project_id, a["agent"], a["task"])
+            for a in agents
+        ]
+        results = await _asyncio.gather(*tasks, return_exceptions=True)
+
+        final: list[AgentResult] = []
+        for i, r in enumerate(results):
+            if isinstance(r, Exception):
+                final.append(AgentResult(
+                    success=False,
+                    output="",
+                    error=str(r),
+                    token_usage=TokenUsage(model=""),
+                    duration_seconds=0,
+                ))
+                logger.error("Parallel agent[%s] failed: %s", agents[i]["agent"], r)
+            else:
+                final.append(r)
+        return final
 
     async def step_agent(
         self,

@@ -1,6 +1,6 @@
 [project]
 name = "openags"
-version = "0.2.0"
+version = "0.0.1"
 description = "Open Autonomous Generalist Scientist — autonomous research agent framework"
 readme = "README.md"
 license = { text = "MIT" }
