@@ -10,7 +10,7 @@
 
 import { join } from 'path'
 import { startPythonBackend, stopPythonBackend } from './python-backend'
-import { createServer, destroyAllPtySessions } from './server'
+import { createServer, destroyAllPtySessions, destroyAllWorkflows } from './server'
 
 const SERVER_PORT = parseInt(process.env.SERVER_PORT || '3001', 10)
 const isServeOnly = process.argv.includes('--serve')
@@ -123,6 +123,7 @@ async function main(): Promise<void> {
 }
 
 function shutdown(): void {
+  destroyAllWorkflows()
   destroyAllPtySessions()
   stopPythonBackend()
   process.exit(0)

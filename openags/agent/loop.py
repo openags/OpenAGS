@@ -169,10 +169,12 @@ class Agent:
         """Loop step() until done or max_steps reached."""
         start = time.monotonic()
         steps = max_steps or self.max_steps
+        min_steps = self.config.min_steps
         total_usage = TokenUsage()
         all_contents: list[str] = []
         _repeat_count = 0
         _prev_content = ""
+        _has_tool_calls = False  # Track if any tool was called in this loop
 
         await self._emit("agent.start", {"task": task[:200], "max_steps": steps})
 
@@ -181,6 +183,10 @@ class Agent:
                 result = await self.step(task)
                 if result.content and result.content.strip():
                     all_contents.append(result.content)
+
+                # Track tool calls for TOOL_REQUIRED strategy
+                if result.tool_calls:
+                    _has_tool_calls = True
 
                 # Detect repeated output -- force stop if agent is stuck
                 if result.content and result.content == _prev_content and not result.tool_calls:
@@ -214,7 +220,17 @@ class Agent:
                         duration_seconds=time.monotonic() - start,
                     )
 
-                if result.done:
+                # Check done with min_steps guard and tool_required logic
+                if result.done and (_i + 1) >= min_steps:
+                    # TOOL_REQUIRED: must have called at least one tool
+                    if self.config.done_strategy == DoneStrategy.TOOL_REQUIRED and not _has_tool_calls:
+                        logger.info("Agent[%s] step %d: done but no tool calls yet (tool_required), continuing",
+                                    self.config.name, _i + 1)
+                        self._messages.append({
+                            "role": "user",
+                            "content": "你还没有使用任何工具。请立即使用工具来完成任务，不要只输出文字。",
+                        })
+                        continue
                     break
 
             # Combine all meaningful text outputs from the agent's run.
@@ -498,7 +514,7 @@ class Agent:
     # ── Skill integration ─────────────────────────────
 
     def _build_user_prompt(self, task: str, context: str) -> str:
-        """Build user prompt with memory context and skill injections."""
+        """Build user prompt with memory context, skill injections, and upstream files."""
         parts: list[str] = []
 
         if self._skill_engine:
@@ -510,6 +526,24 @@ class Agent:
 
         if context.strip():
             parts.append(context)
+
+        # Inject upstream file content (so agents don't need to read them manually)
+        if self.config.upstream_files and self._module_dir:
+            upstream_parts: list[str] = []
+            for rel_path in self.config.upstream_files:
+                # Resolve relative to module dir (supports ../sibling/ paths)
+                full = (self._module_dir / rel_path).resolve()
+                if full.is_file() and full.exists():
+                    try:
+                        content = full.read_text(encoding="utf-8")
+                        if len(content) > 4000:
+                            content = content[:4000] + "\n... (truncated)"
+                        upstream_parts.append(f"### {rel_path}\n{content}")
+                    except Exception:
+                        pass
+            if upstream_parts:
+                parts.append("## Upstream Data (auto-injected)\n" + "\n\n".join(upstream_parts))
+
         parts.append(f"## Task\n{task}")
         return "\n\n".join(parts)
 
@@ -518,7 +552,8 @@ class Agent:
     def _is_done(self, content: str, tool_calls: list[dict[str, object]]) -> bool:
         """Check if the task is complete based on done_strategy.
 
-        - DEFAULT: done when no tool calls AND content is substantial.
+        - DEFAULT: done when no tool calls AND content is substantial (>50 chars).
+        - TOOL_REQUIRED: same as DEFAULT, but loop() enforces at least one tool call.
         - COORDINATOR: done when content contains none of the continuation phrases.
         """
         if tool_calls:
@@ -527,7 +562,7 @@ class Agent:
         if self.config.done_strategy == DoneStrategy.COORDINATOR:
             return self._is_done_coordinator(content)
 
-        # DEFAULT strategy
+        # DEFAULT and TOOL_REQUIRED: done when substantial text with no tool calls
         if len(content.strip()) < 50:
             return False
         return True

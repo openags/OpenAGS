@@ -1,7 +1,7 @@
 ---
 name: search-papers
 description: Search for academic papers using arXiv and Semantic Scholar
-roles: [literature, coordinator]
+roles: [literature, ags]
 tools: [arxiv, semantic_scholar]
 triggers: ["search papers", "find papers", "literature search", "arxiv", "semantic scholar"]
 allowed-tools: Bash(curl *), Read, Write, Grep

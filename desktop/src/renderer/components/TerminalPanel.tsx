@@ -22,8 +22,9 @@ interface TerminalPanelProps {
 
 /** Derive WebSocket URL for /shell endpoint from current page location */
 function getShellWsUrl(): string {
+  const host = window.location.port === '5173' ? 'localhost:3001' : window.location.host
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${proto}//${window.location.host}/shell`
+  return `${proto}//${host}/shell`
 }
 
 export default function TerminalPanel({

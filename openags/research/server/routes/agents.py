@@ -18,7 +18,7 @@ router = APIRouter()
 
 class RunAgentRequest(BaseModel):
     task: str
-    module: str = "coordinator"
+    module: str = "ags"
     role: str = ""  # deprecated alias for module
     agent_name: str = ""
     mode: RunMode = RunMode.AUTO
@@ -26,7 +26,7 @@ class RunAgentRequest(BaseModel):
 
 class StepAgentRequest(BaseModel):
     task: str
-    module: str = "coordinator"
+    module: str = "ags"
     role: str = ""  # deprecated alias for module
     agent_name: str = ""
 
@@ -39,7 +39,7 @@ class RunPipelineRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[dict[str, str]]
-    module: str = "coordinator"
+    module: str = "ags"
     role: str = ""  # deprecated alias for module
     agent_name: str = ""
     stream: bool = False
@@ -52,7 +52,7 @@ def _get_orch(request: Request) -> Orchestrator:
 
 def _effective_name(agent_name: str, module: str, role: str = "") -> str:
     """Resolve effective agent name: prefer agent_name, then module, then role (deprecated)."""
-    return agent_name or module or role or "coordinator"
+    return agent_name or module or role or "ags"
 
 
 @router.post("/{project_id}/run", response_model=AgentResult)

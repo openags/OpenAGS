@@ -39,11 +39,11 @@ interface Config {
 interface EditableField { key: string; value: string; dirty: boolean }
 
 const BACKEND_TYPES = [
-  { value: 'builtin', label: 'OpenAGS (Built-in)', icon: Cpu, description: 'Use any LLM via OpenAGS. Supports OpenAI, Anthropic, Google, DeepSeek, OpenRouter, and more.', color: '#4f6ef7', installHint: '' },
-  { value: 'claude_code', label: 'Claude Code', icon: Terminal, description: 'Use Anthropic Claude Code CLI as backend.', color: '#7c5cf7', installHint: 'npm install -g @anthropic-ai/claude-code' },
-  { value: 'codex', label: 'Codex (OpenAI)', icon: Bot, description: 'Use OpenAI Codex CLI as backend.', color: '#22c55e', installHint: 'npm install -g @openai/codex' },
-  { value: 'copilot', label: 'Copilot CLI', icon: Sparkles, description: 'Use GitHub Copilot CLI as backend.', color: '#f59e0b', installHint: 'gh extension install github/gh-copilot' },
-  { value: 'gemini_cli', label: 'Gemini CLI', icon: Terminal, description: 'Use Google Gemini CLI as backend.', color: '#ef4444', installHint: 'npm install -g @anthropic-ai/gemini-cli' },
+  { value: 'claude_code', label: 'Claude Code', icon: Terminal, description: 'Anthropic Claude Code — recommended.', color: '#7c5cf7', installHint: 'npm install -g @anthropic-ai/claude-code', available: true },
+  { value: 'codex', label: 'Codex (OpenAI)', icon: Bot, description: 'OpenAI Codex CLI.', color: '#22c55e', installHint: 'npm install -g @openai/codex', available: false },
+  { value: 'copilot', label: 'Copilot CLI', icon: Sparkles, description: 'GitHub Copilot CLI.', color: '#f59e0b', installHint: 'gh extension install github/gh-copilot', available: false },
+  { value: 'gemini_cli', label: 'Gemini CLI', icon: Terminal, description: 'Google Gemini CLI.', color: '#ef4444', installHint: 'npm install -g @google/gemini-cli', available: false },
+  { value: 'builtin', label: 'OpenAGS (Built-in)', icon: Cpu, description: 'Built-in LLM agent via LiteLLM.', color: '#4f6ef7', installHint: '', available: false },
 ]
 
 const MODEL_GROUPS = [
@@ -98,8 +98,9 @@ export default function Settings(): React.ReactElement {
     const bt = backendType.value
     if (!['claude_code', 'codex', 'gemini_cli'].includes(bt)) return
 
+    const host = window.location.port === '5173' ? 'localhost:3001' : window.location.host
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${proto}//${window.location.host}/chat`)
+    const ws = new WebSocket(`${proto}//${host}/chat`)
     cliWsRef.current = ws
 
     ws.onopen = () => {
@@ -394,21 +395,34 @@ export default function Settings(): React.ReactElement {
             {BACKEND_TYPES.map((bt) => {
               const Icon = bt.icon
               const isSelected = backendType.value === bt.value
+              const isAvailable = bt.available !== false
               const health = backendHealth[bt.value]
               const isInstalled = health === true
               const isChecked = health !== undefined
               return (
-                <div key={bt.value} onClick={() => void handleBackendChange(bt.value)}
-                  style={{ padding: '12px 14px', borderRadius: 10, border: `2px solid ${isSelected ? bt.color : 'var(--border)'}`, background: isSelected ? `${bt.color}08` : '#fff', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', gap: 6 }}
-                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.borderColor = `${bt.color}60` }}
-                  onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.borderColor = isSelected ? bt.color : 'var(--border)' }}>
+                <div key={bt.value}
+                  onClick={() => { if (isAvailable) void handleBackendChange(bt.value) }}
+                  style={{
+                    padding: '12px 14px', borderRadius: 10,
+                    border: `2px solid ${isSelected ? bt.color : 'var(--border)'}`,
+                    background: isSelected ? `${bt.color}08` : isAvailable ? 'var(--bg-card)' : 'var(--bg-sidebar)',
+                    cursor: isAvailable ? 'pointer' : 'not-allowed',
+                    opacity: isAvailable ? 1 : 0.45,
+                    transition: 'all 0.15s',
+                    display: 'flex', flexDirection: 'column', gap: 6,
+                  }}
+                  onMouseEnter={(e) => { if (isAvailable && !isSelected) e.currentTarget.style.borderColor = `${bt.color}60` }}
+                  onMouseLeave={(e) => { if (isAvailable && !isSelected) e.currentTarget.style.borderColor = 'var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 28, height: 28, borderRadius: 7, background: `${bt.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon size={14} color={bt.color} strokeWidth={2} />
+                      <Icon size={14} color={isAvailable ? bt.color : '#aaa'} strokeWidth={2} />
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: isSelected ? 600 : 500, color: isSelected ? bt.color : 'var(--text)' }}>{bt.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: isSelected ? 600 : 500, color: isSelected ? bt.color : isAvailable ? 'var(--text)' : 'var(--text-tertiary)' }}>{bt.label}</span>
                     <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {isChecked && (
+                      {!isAvailable && (
+                        <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-tertiary)', background: 'var(--bg-input)', padding: '1px 6px', borderRadius: 4 }}>Coming soon</span>
+                      )}
+                      {isAvailable && isChecked && (
                         isInstalled
                           ? <span style={{ fontSize: 10, fontWeight: 600, color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '1px 6px', borderRadius: 4 }}>Ready</span>
                           : <span style={{ fontSize: 10, fontWeight: 600, color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '1px 6px', borderRadius: 4 }}>Not installed</span>
@@ -416,8 +430,8 @@ export default function Settings(): React.ReactElement {
                       {isSelected && <CheckCircle2 size={14} color={bt.color} />}
                     </span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.4 }}>{bt.description}</div>
-                  {isChecked && !isInstalled && bt.installHint && (
+                  <div style={{ fontSize: 11, color: isAvailable ? 'var(--text-tertiary)' : 'var(--text-tertiary)', lineHeight: 1.4 }}>{bt.description}</div>
+                  {isAvailable && isChecked && !isInstalled && bt.installHint && (
                     <div style={{ fontSize: 10, color: 'var(--text-tertiary)', background: 'var(--bg-input)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', lineHeight: 1.4 }}>
                       Install: <code style={{ color: 'var(--accent)' }}>{bt.installHint}</code>
                     </div>

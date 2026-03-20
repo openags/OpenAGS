@@ -23,7 +23,7 @@ def skill_dir(tmp_path: Path) -> Path:
         "---\n"
         "name: search_papers\n"
         "description: Search for papers\n"
-        "roles: [literature, coordinator]\n"
+        "roles: [literature, ags]\n"
         "tools: [arxiv]\n"
         "triggers: [\"search papers\", \"find papers\"]\n"
         "version: \"1.0.0\"\n"
@@ -97,7 +97,7 @@ class TestSkillParsing:
         skill = engine.get("search_papers")
         assert skill is not None
         assert "literature" in skill.roles
-        assert "coordinator" in skill.roles
+        assert "ags" in skill.roles
         assert "arxiv" in skill.tools
         assert skill.version == "1.0.0"
 
@@ -248,7 +248,7 @@ class TestSOULTemplates:
         return Path(__file__).parent.parent.parent / "skills" / "agents"
 
     @pytest.mark.parametrize("role", [
-        "literature", "coordinator", "proposer",
+        "literature", "ags", "proposer",
         "experimenter", "writer", "reviewer", "reference",
     ])
     def test_soul_exists(self, soul_dir: Path, role: str) -> None:
@@ -260,7 +260,7 @@ class TestSOULTemplates:
         assert "{{max_steps}}" in content
 
     @pytest.mark.parametrize("role", [
-        "literature", "coordinator", "proposer",
+        "literature", "ags", "proposer",
         "experimenter", "writer", "reviewer", "reference",
     ])
     def test_soul_has_capabilities(self, soul_dir: Path, role: str) -> None:

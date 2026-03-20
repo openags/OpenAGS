@@ -84,13 +84,34 @@ async def list_backends(request: Request) -> dict:
 @router.get("/backends/test")
 async def test_backends(request: Request) -> dict:
     """Test backend connectivity."""
-    orch: Orchestrator = request.app.state.orchestrator
-    try:
-        backend = orch._runtime.get_llm_backend()
-        ok = await backend.health_check()
-        return {"results": {"builtin": ok}}
-    except Exception as e:
-        return {"results": {"error": str(e)}}
+    import shutil
+
+    config = request.app.state.config
+    backend_type = config.default_backend.type
+    results: dict[str, bool] = {}
+
+    # Builtin: check model config
+    if backend_type == "builtin":
+        try:
+            orch: Orchestrator = request.app.state.orchestrator
+            backend = orch._runtime.get_llm_backend()
+            results["builtin"] = await backend.health_check()
+        except Exception:
+            results["builtin"] = False
+    else:
+        results["builtin"] = True  # not active, skip
+
+    # CLI backends: check if the CLI tool is installed
+    cli_checks = {
+        "claude_code": "claude",
+        "codex": "codex",
+        "gemini_cli": "gemini",
+        "cursor": "cursor",
+    }
+    for backend_name, cmd in cli_checks.items():
+        results[backend_name] = shutil.which(cmd) is not None
+
+    return {"results": results}
 
 
 # ── Remote Server Management ────────────────────────

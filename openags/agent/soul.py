@@ -24,10 +24,10 @@ def parse_soul(path: Path) -> tuple[AgentConfig, str]:
         raw: dict[str, object] = yaml.safe_load(match.group(1)) or {}
         body = text[match.end() :]
         if "name" not in raw:
-            raw["name"] = path.parent.name or "coordinator"
+            raw["name"] = path.parent.name or "ags"
         config = AgentConfig(**raw, source_path=path)
     else:
-        name = path.parent.name or "coordinator"
+        name = path.parent.name or "ags"
         config = AgentConfig(name=name, source_path=path)
         body = text
 
@@ -37,6 +37,7 @@ def parse_soul(path: Path) -> tuple[AgentConfig, str]:
 def write_soul(path: Path, config: AgentConfig, body: str) -> None:
     """Write SOUL.md with frontmatter + body."""
     data = config.model_dump(
+        mode="json",
         exclude={"source_path"},
         exclude_none=True,
         exclude_defaults=True,

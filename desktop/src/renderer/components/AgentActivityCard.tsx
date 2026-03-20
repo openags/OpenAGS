@@ -26,6 +26,7 @@ import {
   ChevronRight,
   Zap,
   MessageSquare,
+  GraduationCap,
 } from 'lucide-react'
 import { BASE_URL } from '../services/api'
 
@@ -75,7 +76,8 @@ const TOOL_ICONS: Record<string, typeof Search> = {
 }
 
 const ROLE_ICONS: Record<string, typeof Bot> = {
-  coordinator: Bot,
+  ags: Bot,
+  pi: GraduationCap,
   literature: BookOpen,
   proposer: Lightbulb,
   experimenter: FlaskConical,
@@ -85,7 +87,8 @@ const ROLE_ICONS: Record<string, typeof Bot> = {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  coordinator: '#4f6ef7',
+  ags: '#4f6ef7',
+  pi: '#4f6ef7',
   literature: '#8b5cf6',
   proposer: '#0ea5e9',
   experimenter: '#22c55e',

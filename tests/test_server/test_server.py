@@ -101,7 +101,7 @@ def test_step_agent(client, mock_orch):
 
     r = client.post("/api/agents/proj-1/step", json={
         "task": "Next step",
-        "role": "coordinator",
+        "role": "ags",
     })
     assert r.status_code == 200
     assert r.json()["content"] == "Step done"

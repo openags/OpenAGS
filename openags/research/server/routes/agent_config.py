@@ -94,7 +94,7 @@ def _resolve_module_dir(request: Request, project_id: str, section: str) -> Path
     except ProjectError:
         raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
 
-    if section in ("sessions", "coordinator"):
+    if section in ("ags", "sessions", "coordinator"):
         return project.workspace / ".openags"
     return project.workspace / section
 

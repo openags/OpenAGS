@@ -61,6 +61,19 @@ export function loadThreadStore(): ThreadStore {
   }
 }
 
+/** Remove all threads for a project from the store. */
+export function clearProjectThreads(projectId: string): void {
+  const store = loadThreadStore()
+  let changed = false
+  for (const key of Object.keys(store)) {
+    if (key.startsWith(`${projectId}:`)) {
+      delete store[key]
+      changed = true
+    }
+  }
+  if (changed) saveThreadStore(store)
+}
+
 export function saveThreadStore(store: ThreadStore): void {
   if (typeof window === 'undefined') return
 

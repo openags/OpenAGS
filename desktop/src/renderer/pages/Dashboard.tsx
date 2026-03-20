@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
+import { clearProjectThreads } from '../services/chat_threads'
 
 interface Project {
   id: string
@@ -114,6 +115,7 @@ export default function Dashboard(): React.ReactElement {
   const handleDelete = async (projectId: string) => {
     try {
       await api.delete(`/api/projects/${projectId}`)
+      clearProjectThreads(projectId)
       message.success(`Deleted project "${projectId}"`)
       fetchProjects()
     } catch {
@@ -370,7 +372,7 @@ export default function Dashboard(): React.ReactElement {
           return (
             <div
               key={project.id}
-              onClick={() => navigate(`/project/${project.id}/sessions`)}
+              onClick={() => navigate(`/project/${project.id}/pi`)}
               onContextMenu={(e) => {
                 e.preventDefault()
                 setProjectMenu({ id: project.id, x: e.clientX, y: e.clientY })
@@ -513,7 +515,7 @@ export default function Dashboard(): React.ReactElement {
         >
           <div
             onClick={() => {
-              navigate(`/project/${projectMenu.id}/sessions`)
+              navigate(`/project/${projectMenu.id}/pi`)
               setProjectMenu(null)
             }}
             style={menuItemStyle}

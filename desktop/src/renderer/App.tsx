@@ -5,6 +5,7 @@ import {
   Search,
   Plus,
   MessageSquare,
+  GraduationCap,
   BookOpen,
   Lightbulb,
   FlaskConical,
@@ -49,7 +50,7 @@ interface ProjectItem {
 
 // Fixed workflow sections in display order
 const WORKFLOW_SECTIONS = [
-  { key: 'sessions', icon: MessageSquare, label: 'Sessions' },
+  { key: 'pi', icon: GraduationCap, label: 'PI' },
   { key: 'literature', icon: BookOpen, label: 'Literature Review' },
   { key: 'proposal', icon: Lightbulb, label: 'Proposal' },
   { key: 'experiments', icon: FlaskConical, label: 'Experiments' },
@@ -62,7 +63,7 @@ const WORKFLOW_SECTIONS = [
 const WORKFLOW_KEYS = new Set(WORKFLOW_SECTIONS.map((s) => s.key))
 
 const MODULE_ICONS: Record<string, typeof MessageSquare> = {
-  sessions: MessageSquare,
+  pi: GraduationCap,
   literature: BookOpen,
   proposal: Lightbulb,
   experiments: FlaskConical,
@@ -183,8 +184,8 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
     setExpandedSections((prev) => new Set(prev).add(`${projectId}:${sectionKey}`))
     navigate(`/project/${projectId}/${sectionKey}/${newThread.id}`)
 
-    // Module name = section key; coordinator is the default for 'sessions'
-    const module = sectionKey === 'sessions' ? 'coordinator' : sectionKey
+    // Module name = section key; PI maps to 'pi' subdirectory
+    const module = sectionKey === 'pi' ? 'pi' : sectionKey
     if (!NON_CHAT_SECTIONS.has(sectionKey)) {
       api
         .post<{ id: string }>(`/api/sessions/${projectId}/${sectionKey}`, {
@@ -273,13 +274,13 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
               label="New Chat"
               shortcut="N"
               onClick={() => {
-                createThread(contextMenu.projectId, 'sessions')
+                createThread(contextMenu.projectId, 'pi')
                 setContextMenu(null)
               }}
             />
           </>
         )}
-        {contextMenu.kind === 'section' && (
+        {contextMenu.kind === 'section' && contextMenu.sectionKey === 'pi' && (
           <ContextMenuItem
             icon={<MessageSquarePlus size={13} strokeWidth={2} />}
             label="New Chat"
@@ -546,7 +547,7 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
                         depth={0}
                         onClick={() => {
                           toggleProject(p.id)
-                          if (!expanded) navigate(`/project/${p.id}/sessions`)
+                          if (!expanded) navigate(`/project/${p.id}/pi`)
                         }}
                         onContextMenu={(e) => {
                           e.preventDefault()
@@ -685,7 +686,7 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
               return (
                 <div
                   key={p.id}
-                  onClick={() => navigate(`/project/${p.id}/sessions`)}
+                  onClick={() => navigate(`/project/${p.id}/pi`)}
                   style={{
                     width: 36,
                     height: 36,

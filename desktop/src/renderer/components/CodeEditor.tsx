@@ -70,8 +70,8 @@ export default function CodeEditor({ value, onChange, readOnly = false }: CodeEd
     if (!containerRef.current) return
 
     const theme = EditorView.theme({
-      '&': { height: '100%', fontSize: '13px' },
-      '.cm-scroller': { overflow: 'auto', fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace" },
+      '&': { height: '100%', fontSize: '13px', position: 'absolute', inset: '0' },
+      '.cm-scroller': { overflow: 'auto !important', fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace" },
       '.cm-content': { padding: '8px 0' },
       '.cm-gutters': { background: 'var(--bg-sidebar)', border: 'none', color: 'var(--text-tertiary)' },
       '.cm-activeLineGutter': { background: 'var(--bg-hover)' },
@@ -123,5 +123,5 @@ export default function CodeEditor({ value, onChange, readOnly = false }: CodeEd
     }
   }, [value])
 
-  return <div ref={containerRef} style={{ height: '100%', overflow: 'hidden' }} />
+  return <div ref={containerRef} style={{ height: '100%', overflow: 'hidden', position: 'relative' }} />
 }
