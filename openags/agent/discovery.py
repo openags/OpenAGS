@@ -37,7 +37,7 @@ class AgentDiscovery:
         """Discover all agents in a project directory."""
         agents: dict[str, AgentConfig] = {}
 
-        # Root = coordinator
+        # Root = AGS (autonomous generalist scientist)
         root_config = AgentDiscovery._load_from_dir(project_dir, is_root=True)
         agents[root_config.name] = root_config
 
@@ -76,7 +76,7 @@ class AgentDiscovery:
             return config
 
         # No SOUL.md — pure defaults
-        name = "coordinator" if is_root else directory.name
+        name = "ags" if is_root else directory.name
         return AgentConfig(
             name=name,
             description=f"Agent for {name}",

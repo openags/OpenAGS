@@ -20,7 +20,7 @@ router = APIRouter()
 
 
 class CreateSessionRequest(BaseModel):
-    module: str = "coordinator"
+    module: str = "ags"
     agent_role: str = ""  # deprecated alias for module
     agent_name: str = ""
     title: str = ""
@@ -38,7 +38,7 @@ def _resolve_section_dir(section: str) -> str:
     Everything else maps directly to the section name itself — no hardcoded
     lookup table required.
     """
-    if section in ("sessions", "coordinator"):
+    if section in ("ags", "sessions", "coordinator"):
         return ".openags"
     return section
 

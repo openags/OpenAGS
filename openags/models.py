@@ -18,6 +18,7 @@ AgentName = str
 class DoneStrategy(StrEnum):
     DEFAULT = "default"
     COORDINATOR = "coordinator"
+    TOOL_REQUIRED = "tool_required"
 
 
 class PermissionMode(StrEnum):
@@ -98,7 +99,7 @@ class UserPublic(BaseModel):
 class Session(BaseModel):
     id: str
     project_id: str
-    agent_role: str = "coordinator"
+    agent_role: str = "ags"
     agent_name: str = ""
     name: str = ""
     mode: RunMode = RunMode.INTERACTIVE
@@ -164,6 +165,7 @@ class AgentConfig(BaseModel):
     description: str = ""
     tools: list[str] = []
     max_steps: int = Field(default=50, ge=1, le=500)
+    min_steps: int = Field(default=1, ge=1, le=50)
     done_strategy: DoneStrategy = DoneStrategy.DEFAULT
     continuation_phrases: list[str] = []
     model: str | None = None
@@ -171,6 +173,7 @@ class AgentConfig(BaseModel):
     permission_mode: PermissionMode = PermissionMode.DEFAULT
     hooks: list[HookConfig] | None = None
     isolation: str | None = None
+    upstream_files: list[str] = []
     source_path: Path | None = Field(default=None, exclude=True)
 
 
@@ -306,6 +309,128 @@ class MessagingConfig(BaseModel):
     discord: DiscordConfig | None = None
 
 
+# ── Workflow Protocol ─────────────────────────────────
+
+
+class DirectiveAction(StrEnum):
+    EXECUTE = "execute"
+    REVISE = "revise"
+    ABORT = "abort"
+
+
+class DirectivePriority(StrEnum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    NORMAL = "normal"
+    LOW = "low"
+
+
+class DirectiveDecision(StrEnum):
+    PROCEED = "PROCEED"
+    REFINE = "REFINE"
+    PIVOT = "PIVOT"
+
+
+class AgentStatus(StrEnum):
+    IDLE = "idle"
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    BLOCKED = "blocked"
+    ABORTED = "aborted"
+
+
+class ExitReason(StrEnum):
+    TASK_COMPLETE = "task_complete"
+    MAX_STEPS = "max_steps"
+    TIMEOUT = "timeout"
+    ERROR = "error"
+    USER_ABORT = "user_abort"
+    AGENT_ABORT = "agent_abort"
+    PARSE_ERROR = "parse_error"
+    STALE_AFTER_CRASH = "stale_after_crash"
+    WAIT_USER = "wait_user"
+    PROJECT_COMPLETE = "project_complete"
+
+
+class DirectiveModel(BaseModel):
+    """DIRECTIVE.md — task assignment from Coordinator to Sub-Agent."""
+
+    directive_id: str
+    phase: str = ""
+    action: DirectiveAction = DirectiveAction.EXECUTE
+    priority: DirectivePriority = DirectivePriority.NORMAL
+    created_at: str = ""
+    timeout_seconds: int = 1800
+    max_attempts: int = 2
+    attempt: int = 1
+    decision: DirectiveDecision = DirectiveDecision.PROCEED
+    decision_reason: str = ""
+    depends_on: list[str] = []
+    # Body sections (not in frontmatter)
+    task: str = ""
+    acceptance_criteria: str = ""
+    context: str = ""
+    upstream_data: str = ""
+
+
+class StatusModel(BaseModel):
+    """STATUS.md — execution result from Sub-Agent."""
+
+    directive_id: str = ""
+    agent: str = ""
+    status: AgentStatus = AgentStatus.IDLE
+    started_at: str = ""
+    completed_at: str = ""
+    duration_seconds: float = 0.0
+    exit_reason: ExitReason | None = None
+    error_message: str | None = None
+    artifacts: list[str] = []
+    quality_self_assessment: int = 0
+    token_usage: TokenUsage = Field(default_factory=TokenUsage)
+    backend: str = ""
+    # Body sections (not in frontmatter)
+    summary: str = ""
+    acceptance_criteria_met: str = ""
+    issues: str = ""
+    recommendations: str = ""
+
+
+class WorkflowAgentConfig(BaseModel):
+    """Per-agent workflow overrides."""
+
+    timeout: int = 1800
+    execution_timeout: int | None = None
+    max_attempts: int = 2
+
+
+class WorkflowConfig(BaseModel):
+    """Global workflow configuration with per-agent overrides."""
+
+    max_refine: int = Field(default=2, ge=1, le=10)
+    max_pivot: int = Field(default=1, ge=0, le=5)
+    max_attempts: int = Field(default=2, ge=1, le=10)
+    coordinator_timeout: int = Field(default=300, ge=60, le=3600)
+    poll_interval: int = Field(default=2000, ge=500, le=30000)
+    auto_start: bool = False
+    agents: dict[str, WorkflowAgentConfig] = {}
+
+    def get_agent_timeout(self, agent_name: str) -> int:
+        """Lookup chain: agent-level → code default (1800)."""
+        agent_cfg = self.agents.get(agent_name)
+        if agent_cfg:
+            return agent_cfg.timeout
+        return 1800
+
+    def get_agent_max_attempts(self, agent_name: str) -> int:
+        """Lookup chain: agent-level → global → code default (2)."""
+        agent_cfg = self.agents.get(agent_name)
+        if agent_cfg:
+            return agent_cfg.max_attempts
+        return self.max_attempts
+
+
 class GPUConfig(BaseModel):
     auto_detect: bool = True
     device_ids: list[int] = []
@@ -330,6 +455,7 @@ class SystemConfig(BaseModel):
     gpu: GPUConfig = Field(default_factory=GPUConfig)
     remote_servers: list[RemoteServer] = []
     messaging: MessagingConfig = Field(default_factory=MessagingConfig)
+    workflow: WorkflowConfig = Field(default_factory=WorkflowConfig)
     experiment_sandbox: SandboxMode = SandboxMode.LOCAL
     experiment_max_fix_attempts: int = Field(default=5, ge=1, le=20)
     token_budget_usd: float | None = Field(default=None, ge=0)

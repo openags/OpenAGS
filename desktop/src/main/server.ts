@@ -328,6 +328,109 @@ async function handleChatConnection(ws: WebSocket): Promise<void> {
   })
 }
 
+// ── Workflow Orchestrators (per project) ────────────
+
+import { WorkflowOrchestrator } from './workflow/orchestrator'
+import type { WorkflowConfig, WorkflowEvent } from './workflow/types'
+
+const workflowOrchestrators = new Map<string, WorkflowOrchestrator>()
+
+function handleWorkflowConnection(ws: WebSocket): void {
+  let registeredProjectId: string | null = null
+
+  ws.on('message', async (raw) => {
+    let data: Record<string, unknown>
+    try { data = JSON.parse(raw.toString()) } catch { return }
+
+    const projectId = data.projectId as string
+    const projectDir = data.projectDir as string
+    const backendType = (data.backendType as string) || 'builtin'
+
+    if (data.type === 'workflow.start') {
+      // Load config from Python API
+      let config: WorkflowConfig = {
+        max_refine: 2, max_pivot: 1, max_attempts: 2,
+        coordinator_timeout: 300, poll_interval: 2000,
+        auto_start: false, agents: {},
+      }
+      try {
+        const resp = await fetch(`${PYTHON_BACKEND}/api/workflow/${projectId}/config`)
+        if (resp.ok) config = await resp.json() as WorkflowConfig
+      } catch { /* use defaults */ }
+
+      // Create and start orchestrator
+      let orch = workflowOrchestrators.get(projectId)
+      if (orch) orch.stop()
+
+      orch = new WorkflowOrchestrator(projectId, projectDir, config, backendType)
+
+      // Import existing session IDs from UI (so auto-mode resumes manual sessions)
+      const existingSessionIds = data.sessionIds as Record<string, string> | undefined
+      if (existingSessionIds) orch.setSessionIds(existingSessionIds)
+
+      // Register this UI client for auto-mode broadcasts
+      orch.uiClients.add(ws)
+      registeredProjectId = projectId
+
+      workflowOrchestrators.set(projectId, orch)
+      await orch.start()
+    }
+
+    else if (data.type === 'workflow.subscribe') {
+      // UI client wants to receive auto messages for a project (without starting)
+      const orch = workflowOrchestrators.get(projectId)
+      if (orch) {
+        orch.uiClients.add(ws)
+        registeredProjectId = projectId
+        // Send current state
+        // Send simplified status (string per agent, not full objects)
+        const statuses: Record<string, string> = {}
+        for (const [name, info] of Object.entries(orch.getState())) {
+          statuses[name] = info.status?.status || 'idle'
+        }
+        ws.send(JSON.stringify({ type: 'auto.pipeline', status: 'running', agents: statuses }))
+      }
+    }
+
+    else if (data.type === 'workflow.stop') {
+      const orch = workflowOrchestrators.get(projectId)
+      if (orch) {
+        orch.uiClients.delete(ws)
+        orch.stop()
+        workflowOrchestrators.delete(projectId)
+      }
+      ws.send(JSON.stringify({ type: 'auto.pipeline', status: 'stopped' }))
+    }
+
+    else if (data.type === 'workflow.pause') {
+      workflowOrchestrators.get(projectId)?.pause()
+    }
+
+    else if (data.type === 'workflow.resume') {
+      workflowOrchestrators.get(projectId)?.resume()
+    }
+
+    else if (data.type === 'workflow.intervene') {
+      await workflowOrchestrators.get(projectId)?.intervene(data.message as string)
+    }
+
+    else if (data.type === 'workflow.get_state') {
+      const orch = workflowOrchestrators.get(projectId)
+      if (orch) {
+        ws.send(JSON.stringify({ type: 'auto.pipeline', agents: orch.getState() }))
+      }
+    }
+  })
+
+  ws.on('close', () => {
+    // Unregister from orchestrator's UI clients (but don't stop the orchestrator)
+    if (registeredProjectId) {
+      const orch = workflowOrchestrators.get(registeredProjectId)
+      if (orch) orch.uiClients.delete(ws)
+    }
+  })
+}
+
 // ── Create Server ───────────────────────────────────
 
 export function createServer(staticDir?: string): { app: ReturnType<typeof express>; server: http.Server } {
@@ -369,7 +472,11 @@ export function createServer(staticDir?: string): { app: ReturnType<typeof expre
   const chatWss = new WebSocketServer({ noServer: true })
   chatWss.on('connection', handleChatConnection)
 
-  // Handle WebSocket upgrade: /shell → PTY, /chat → providers, /ws/* → Python
+  // WebSocket server for workflow orchestration (/workflow)
+  const workflowWss = new WebSocketServer({ noServer: true })
+  workflowWss.on('connection', handleWorkflowConnection)
+
+  // Handle WebSocket upgrade: /shell → PTY, /chat → providers, /workflow → orchestrator, /ws/* → Python
   const wsProxy = createProxyMiddleware({
     target: PYTHON_BACKEND,
     changeOrigin: true,
@@ -385,6 +492,10 @@ export function createServer(staticDir?: string): { app: ReturnType<typeof expre
       chatWss.handleUpgrade(req, socket, head, (ws) => {
         chatWss.emit('connection', ws, req)
       })
+    } else if (req.url?.startsWith('/workflow')) {
+      workflowWss.handleUpgrade(req, socket, head, (ws) => {
+        workflowWss.emit('connection', ws, req)
+      })
     } else if (req.url?.startsWith('/ws')) {
       wsProxy.upgrade!(req, socket, head)
     } else {
@@ -395,4 +506,11 @@ export function createServer(staticDir?: string): { app: ReturnType<typeof expre
   return { app, server }
 }
 
-export { destroyAllPtySessions }
+function destroyAllWorkflows(): void {
+  for (const [, orch] of workflowOrchestrators) {
+    orch.stop()
+  }
+  workflowOrchestrators.clear()
+}
+
+export { destroyAllPtySessions, destroyAllWorkflows }

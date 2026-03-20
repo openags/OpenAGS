@@ -2,6 +2,9 @@
 
 Templates replace the hardcoded _PROJECT_SUBDIRS list, making project
 structure extensible without code changes.
+
+SOUL body text is stored in .md files under openags/research/templates/{template_name}/
+so you can edit them without touching Python code.
 """
 
 from __future__ import annotations
@@ -12,6 +15,17 @@ from pathlib import Path
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+# Directory containing template .md files (sibling to this file)
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+
+def _load_soul_body(template_name: str, agent_name: str) -> str:
+    """Load SOUL body text from templates/{agent_name}.md"""
+    md_path = _TEMPLATES_DIR / f"{agent_name}.md"
+    if md_path.exists():
+        return md_path.read_text(encoding="utf-8").strip()
+    return ""
 
 
 class ModuleTemplate(BaseModel):
@@ -38,43 +52,33 @@ class ProjectTemplate(BaseModel):
 
 
 def _research_template() -> ProjectTemplate:
-    """The default research project template — 7 modules."""
+    """The default research project template — 8 modules."""
     return ProjectTemplate(
         name="research",
         description="Full research workflow: literature → proposal → experiments → manuscript → review",
         root_soul_frontmatter={
-            "name": "coordinator",
-            "description": "Research project coordinator / PI",
+            "name": "ags",
+            "description": "AGS autonomous research coordinator",
             "tools": [
                 "check_progress", "dispatch_agent", "ask_user",
-                "read", "ls", "grep", "bash", "sub_agent",
+                "read", "write", "ls", "grep", "bash", "sub_agent",
             ],
             "max_steps": 50,
-            "done_strategy": "default",
+            "done_strategy": "tool_required",
+            "min_steps": 3,
         },
-        root_soul_body=(
-            "You are the research project coordinator (PI).\n\n"
-            "## Project Context\n\n"
-            "- Read `SOUL.md` or `../CLAUDE.md` for the project overview\n"
-            "- Read `memory.md` for the project's current progress and key findings\n"
-            "- Each subdirectory (literature/, proposal/, experiments/, manuscript/, review/, references/) is an independent agent module\n"
-            "- Read each module's `memory.md` to understand their progress\n\n"
-            "## Workflow\n\n"
-            "Use `check_progress` to see all modules' status, then `dispatch_agent` to assign tasks.\n"
-            "Typical order: literature → proposal → experiments → manuscript → review.\n\n"
-            "## Decision Protocol (PIVOT / REFINE / PROCEED)\n\n"
-            "After each agent completes a task, evaluate the result quality:\n\n"
-            "1. **PROCEED** — Result is good enough. Move to the next stage.\n"
-            "2. **REFINE** — Direction is right but quality is lacking. Re-dispatch the same agent with more specific instructions.\n"
-            "3. **PIVOT** — Direction is wrong. Go back to an earlier stage (e.g., proposal → literature) and try a different approach.\n\n"
-            "Rules:\n"
-            "- Max 2 REFINE attempts per stage before asking the user\n"
-            "- Max 1 PIVOT per project before asking the user\n"
-            "- Always record the decision and reason in `memory.md`\n"
-            "- On REFINE: tell the agent exactly what to fix\n"
-            "- On PIVOT: explain why the direction changed\n"
-        ),
+        root_soul_body=_load_soul_body("research", "ags"),
         modules=[
+            ModuleTemplate(
+                name="pi",
+                soul_frontmatter={
+                    "name": "pi",
+                    "description": "Research advisor and brainstorm partner",
+                    "tools": ["read", "ls", "grep", "check_progress"],
+                },
+                soul_body=_load_soul_body("research", "pi"),
+                subdirs=["sessions", "skills"],
+            ),
             ModuleTemplate(
                 name="literature",
                 soul_frontmatter={
@@ -85,19 +89,9 @@ def _research_template() -> ProjectTemplate:
                         "read", "write", "edit",
                         "ls", "grep", "sub_agent",
                     ],
+                    "upstream_files": ["../chatroom.md"],
                 },
-                soul_body=(
-                    "You are a literature review specialist.\n\n"
-                    "## Context Sources\n\n"
-                    "- `../CLAUDE.md` — project overview and research topic\n"
-                    "- `../memory.md` — project-level progress and key decisions\n"
-                    "- `../uploads/` — papers uploaded by the user (PDF supported)\n\n"
-                    "## Your Outputs\n\n"
-                    "- Search results → `notes/search_results.md`\n"
-                    "- Paper notes → `notes/{paper_id}.md`\n"
-                    "- Literature review → `notes/literature_review.md`\n"
-                    "- Update `memory.md` after each task with what you found\n"
-                ),
+                soul_body=_load_soul_body("research", "literature"),
                 subdirs=["papers", "notes", "sessions", "skills"],
             ),
             ModuleTemplate(
@@ -109,18 +103,9 @@ def _research_template() -> ProjectTemplate:
                         "read", "write", "edit",
                         "ls", "grep", "sub_agent",
                     ],
+                    "upstream_files": ["../chatroom.md"],
                 },
-                soul_body=(
-                    "You are a research proposal specialist.\n\n"
-                    "## Context Sources (read these first!)\n\n"
-                    "- `../CLAUDE.md` — project overview\n"
-                    "- `../literature/notes/` — search results and literature review\n"
-                    "- `../literature/memory.md` — what the literature agent found\n\n"
-                    "## Your Outputs\n\n"
-                    "- Gap analysis → `ideas/gap_analysis.md`\n"
-                    "- Research proposal → `ideas/proposal.md` (hypothesis, methodology, evaluation)\n"
-                    "- Update `memory.md` after each task\n"
-                ),
+                soul_body=_load_soul_body("research", "proposal"),
                 subdirs=["ideas", "sessions", "skills"],
             ),
             ModuleTemplate(
@@ -132,30 +117,9 @@ def _research_template() -> ProjectTemplate:
                         "read", "write", "edit", "ls",
                         "grep", "bash", "sub_agent",
                     ],
+                    "upstream_files": ["../chatroom.md"],
                 },
-                soul_body=(
-                    "You are an experiment scientist.\n\n"
-                    "## Context Sources (read these first!)\n\n"
-                    "- `../proposal/ideas/proposal.md` — research hypothesis and methodology\n"
-                    "- `../literature/notes/` — related work for baselines\n"
-                    "- `../proposal/memory.md` — proposal decisions\n\n"
-                    "## Your Outputs\n\n"
-                    "- Experiment code → `code/`\n"
-                    "- Raw data → `data/`\n"
-                    "- Analysis report → `results/analysis.md`\n"
-                    "- Figures → `results/*.png`\n"
-                    "- Update `memory.md` after each task\n\n"
-                    "## Experiment Loop (edit → run → evaluate → keep/discard)\n\n"
-                    "When running experiments, follow this loop:\n"
-                    "1. Write code to `code/`\n"
-                    "2. Run with bash (set timeout, e.g. `timeout 300 python code/main.py`)\n"
-                    "3. If error → read stderr, fix the code, retry (max 3 times)\n"
-                    "4. If success → extract metrics from output\n"
-                    "5. Compare with previous results (if any) in `results/`\n"
-                    "6. If improved → keep the code and save results\n"
-                    "7. If worse → revert the change, try a different approach\n"
-                    "8. Record every attempt in `memory.md` (what you tried, what worked, what didn't)\n"
-                ),
+                soul_body=_load_soul_body("research", "experiments"),
                 subdirs=["code", "data", "results", "runs", "sessions", "skills"],
             ),
             ModuleTemplate(
@@ -167,22 +131,10 @@ def _research_template() -> ProjectTemplate:
                         "read", "write", "edit",
                         "ls", "grep", "sub_agent",
                     ],
+                    "upstream_files": ["../chatroom.md"],
                 },
-                soul_body=(
-                    "You are an academic writing specialist.\n\n"
-                    "## Context Sources (read these before writing!)\n\n"
-                    "- `../literature/notes/literature_review.md` — for Related Work section\n"
-                    "- `../proposal/ideas/proposal.md` — for Introduction and Method sections\n"
-                    "- `../experiments/results/analysis.md` — for Results and Discussion sections\n"
-                    "- `../experiments/results/*.png` — figures to include\n"
-                    "- `../experiments/data/` — raw data for tables\n"
-                    "- `../references/` — BibTeX references\n\n"
-                    "## Your Outputs\n\n"
-                    "- Paper → `main.tex`\n"
-                    "- Bibliography → `references.bib`\n"
-                    "- Update `memory.md` after each task\n"
-                ),
-                subdirs=["drafts", "figures", "sessions", "skills"],
+                soul_body=_load_soul_body("research", "manuscript"),
+                subdirs=["figures", "sessions", "skills"],
             ),
             ModuleTemplate(
                 name="review",
@@ -194,19 +146,9 @@ def _research_template() -> ProjectTemplate:
                         "read", "write", "edit",
                         "ls", "grep", "sub_agent",
                     ],
+                    "upstream_files": ["../chatroom.md"],
                 },
-                soul_body=(
-                    "You are a rigorous peer reviewer.\n\n"
-                    "## Context Sources\n\n"
-                    "- `../manuscript/main.tex` — the paper to review\n"
-                    "- `../experiments/results/analysis.md` — verify claims against data\n"
-                    "- `../literature/notes/` — check citation coverage\n"
-                    "- `../proposal/ideas/proposal.md` — verify the paper addresses the research questions\n\n"
-                    "## Your Outputs\n\n"
-                    "- Review report → `reviews/review_report.md`\n"
-                    "- Include: overall score, strengths, weaknesses, specific suggestions\n"
-                    "- Update `memory.md` after each task\n"
-                ),
+                soul_body=_load_soul_body("research", "review"),
                 subdirs=["reviews", "responses", "sessions", "skills"],
             ),
             ModuleTemplate(
@@ -220,103 +162,8 @@ def _research_template() -> ProjectTemplate:
                         "ls", "grep", "sub_agent",
                     ],
                 },
-                soul_body=(
-                    "You are a citation management specialist.\n\n"
-                    "## Context Sources\n\n"
-                    "- `../literature/notes/` — papers found during literature review\n"
-                    "- `../manuscript/main.tex` — check all \\cite{} references\n"
-                    "- `../manuscript/references.bib` — current bibliography\n\n"
-                    "## Your Outputs\n\n"
-                    "- Updated BibTeX → `../manuscript/references.bib`\n"
-                    "- Citation report → `pdfs/citation_report.md`\n"
-                    "- Update `memory.md` after each task\n"
-                ),
+                soul_body=_load_soul_body("research", "references"),
                 subdirs=["pdfs", "sessions", "skills"],
-            ),
-        ],
-    )
-
-
-def _minimal_template() -> ProjectTemplate:
-    """Minimal project — just a coordinator."""
-    return ProjectTemplate(
-        name="minimal",
-        description="Minimal project with only a root coordinator agent",
-        root_soul_frontmatter={
-            "name": "coordinator",
-            "tools": [
-                "read", "write", "edit", "ls",
-                "grep", "bash", "sub_agent", "ask_user",
-            ],
-            "max_steps": 30,
-            "done_strategy": "coordinator",
-        },
-        modules=[],
-    )
-
-
-def _data_science_template() -> ProjectTemplate:
-    """Data science project template."""
-    return ProjectTemplate(
-        name="data-science",
-        description="Data science workflow: collection → analysis → visualization → report",
-        root_soul_frontmatter={
-            "name": "coordinator",
-            "tools": [
-                "check_progress", "dispatch_agent", "ask_user",
-                "read", "ls", "grep", "bash", "sub_agent",
-            ],
-            "max_steps": 40,
-            "done_strategy": "coordinator",
-        },
-        modules=[
-            ModuleTemplate(
-                name="data_collection",
-                soul_frontmatter={
-                    "name": "data_collection",
-                    "description": "Data acquisition and preprocessing",
-                    "tools": [
-                        "read", "write", "edit", "ls",
-                        "grep", "bash", "sub_agent",
-                    ],
-                },
-                subdirs=["raw", "processed", "sessions", "skills"],
-            ),
-            ModuleTemplate(
-                name="analysis",
-                soul_frontmatter={
-                    "name": "analysis",
-                    "description": "Statistical analysis and modeling",
-                    "tools": [
-                        "read", "write", "edit", "ls",
-                        "grep", "bash", "sub_agent",
-                    ],
-                },
-                subdirs=["notebooks", "results", "sessions", "skills"],
-            ),
-            ModuleTemplate(
-                name="visualization",
-                soul_frontmatter={
-                    "name": "visualization",
-                    "description": "Data visualization and figure creation",
-                    "tools": [
-                        "read", "write", "edit", "ls",
-                        "grep", "bash", "sub_agent",
-                    ],
-                },
-                subdirs=["figures", "sessions", "skills"],
-            ),
-            ModuleTemplate(
-                name="report",
-                soul_frontmatter={
-                    "name": "report",
-                    "description": "Report writing and documentation",
-                    "tools": [
-                        "read", "write", "edit",
-                        "ls", "grep", "sub_agent",
-                    ],
-                },
-                subdirs=["drafts", "sessions", "skills"],
             ),
         ],
     )
@@ -327,9 +174,8 @@ _TEMPLATES: dict[str, ProjectTemplate] = {}
 
 def _ensure_loaded() -> None:
     if not _TEMPLATES:
-        for factory in (_research_template, _minimal_template, _data_science_template):
-            tpl = factory()
-            _TEMPLATES[tpl.name] = tpl
+        tpl = _research_template()
+        _TEMPLATES[tpl.name] = tpl
 
 
 def load_template(name: str) -> ProjectTemplate:
@@ -360,6 +206,14 @@ def apply_template(template: ProjectTemplate, project_dir: Path) -> None:
         if not root_soul.exists() and template.root_soul_body:
             write_soul(root_soul, root_config, template.root_soul_body)
 
+    # Create chatroom.md (append-only inter-agent communication log)
+    chatroom_path = project_dir / "chatroom.md"
+    if not chatroom_path.exists():
+        chatroom_path.write_text(
+            "# Chatroom\n\nAppend-only inter-agent communication log.\n\n",
+            encoding="utf-8",
+        )
+
     # Create each module
     for mod in template.modules:
         mod_dir = project_dir / mod.name
@@ -386,10 +240,11 @@ def apply_template(template: ProjectTemplate, project_dir: Path) -> None:
                 file_path.parent.mkdir(parents=True, exist_ok=True)
                 file_path.write_text(content, encoding="utf-8")
 
-    # Sync: generate CLAUDE.md / AGENTS.md / GEMINI.md for each module (not root)
-    # Root CLAUDE.md is project-level info, not coordinator's role
+    # Sync: generate CLAUDE.md / AGENTS.md / GEMINI.md for root + all modules
     from openags.research.adapter import prepare_folder_for_cli
 
     for runtime in ("claude_code", "codex", "gemini_cli"):
+        # Root agent (AGS) gets CLI config files too
+        prepare_folder_for_cli(project_dir, runtime)
         for mod in template.modules:
             prepare_folder_for_cli(project_dir / mod.name, runtime)

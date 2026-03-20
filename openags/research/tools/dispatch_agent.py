@@ -77,7 +77,7 @@ class DispatchAgentTool:
         # Validate agent exists in project
         discovered = self._discover_agents()
         agent_lower = agent_name.lower()
-        available_names = [n for n in discovered if n != "coordinator"]
+        available_names = [n for n in discovered if n not in ("ags", "coordinator")]
         if agent_lower not in discovered:
             return ToolResult(
                 success=False,
@@ -87,14 +87,14 @@ class DispatchAgentTool:
                 ),
             )
 
-        logger.info("Coordinator dispatching %s: %s", agent_name, task[:100])
+        logger.info("AGS dispatching %s: %s", agent_name, task[:100])
 
         # Emit dispatch event for UI
         try:
             from openags.research.server.routes.ws import manager
 
             await manager.broadcast(self._project_id, "agent.dispatch", {
-                "parent": "coordinator",
+                "parent": "ags",
                 "child": agent_name,
                 "task": task[:200],
             })
@@ -138,7 +138,7 @@ class DispatchAgentTool:
 
         # Validate all agents before dispatching
         discovered = self._discover_agents()
-        available_names = [n for n in discovered if n != "coordinator"]
+        available_names = [n for n in discovered if n not in ("ags", "coordinator")]
         for item in agents_batch:
             agent_name = item.get("agent", "")
             if not agent_name:

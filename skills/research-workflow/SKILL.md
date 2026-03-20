@@ -1,7 +1,7 @@
 ---
 name: research-workflow
 description: Dynamic research workflow management with self-reflection and backtracking
-roles: [coordinator]
+roles: [ags]
 tools: [dispatch_agent, check_progress, ask_user]
 triggers: ["research", "workflow", "pipeline", "run project", "start research", "always"]
 version: "1.0.0"

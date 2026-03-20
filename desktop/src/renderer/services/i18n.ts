@@ -155,7 +155,7 @@ const en: Dict = {
     renameProject: 'Rename project',
   },
   project: {
-    sessions: 'Sessions',
+    pi: 'PI',
     literature: 'Literature',
     proposal: 'Proposal',
     experiments: 'Experiments',
@@ -298,7 +298,7 @@ const zh: Dict = {
     renameProject: '重命名项目',
   },
   project: {
-    sessions: '会话',
+    pi: 'PI',
     literature: '文献',
     proposal: '提案',
     experiments: '实验',
@@ -414,7 +414,7 @@ const ja: Dict = {
     deleteConfirm: 'このプロジェクトを削除しますか？元に戻せません。', renameProject: 'プロジェクト名変更',
   },
   project: {
-    sessions: 'セッション', literature: '文献', proposal: '提案', experiments: '実験',
+    pi: 'PI', literature: '文献', proposal: '提案', experiments: '実験',
     manuscript: '論文', review: '査読', references: '参考文献', config: '設定',
     sendMessage: 'メッセージを送信', enterToSend: 'Enterで送信', shiftEnter: 'Shift+Enterで改行',
     startConversation: '会話を開始', openTerminal: 'ターミナルを開く', closeTerminal: 'ターミナルを閉じる',
@@ -476,7 +476,7 @@ const fr: Dict = {
     deleteConfirm: 'Supprimer ce projet ? Irréversible.', renameProject: 'Renommer le projet',
   },
   project: {
-    sessions: 'Sessions', literature: 'Littérature', proposal: 'Proposition', experiments: 'Expériences',
+    pi: 'PI', literature: 'Littérature', proposal: 'Proposition', experiments: 'Expériences',
     manuscript: 'Manuscrit', review: 'Évaluation', references: 'Références', config: 'Config',
     sendMessage: 'Envoyer', enterToSend: 'Entrée pour envoyer', shiftEnter: 'Shift+Entrée pour nouvelle ligne',
     startConversation: 'Démarrer une conversation', openTerminal: 'Ouvrir le terminal',
@@ -538,7 +538,7 @@ const de: Dict = {
     renameProject: 'Projekt umbenennen',
   },
   project: {
-    sessions: 'Sitzungen', literature: 'Literatur', proposal: 'Vorschlag', experiments: 'Experimente',
+    pi: 'PI', literature: 'Literatur', proposal: 'Vorschlag', experiments: 'Experimente',
     manuscript: 'Manuskript', review: 'Begutachtung', references: 'Referenzen', config: 'Konfiguration',
     sendMessage: 'Nachricht senden', enterToSend: 'Enter zum Senden', shiftEnter: 'Shift+Enter für neue Zeile',
     startConversation: 'Gespräch beginnen', openTerminal: 'Terminal öffnen',
@@ -600,7 +600,7 @@ const ar: Dict = {
     renameProject: 'إعادة تسمية المشروع',
   },
   project: {
-    sessions: 'الجلسات', literature: 'الأدبيات', proposal: 'المقترح', experiments: 'التجارب',
+    pi: 'PI', literature: 'الأدبيات', proposal: 'المقترح', experiments: 'التجارب',
     manuscript: 'المخطوطة', review: 'المراجعة', references: 'المراجع', config: 'التكوين',
     sendMessage: 'إرسال', enterToSend: 'Enter للإرسال', shiftEnter: 'Shift+Enter لسطر جديد',
     startConversation: 'بدء محادثة', openTerminal: 'فتح الطرفية',

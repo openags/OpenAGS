@@ -166,7 +166,7 @@ def list_projects() -> None:
 @app.command()
 def chat(
     project: str = typer.Option(..., "--project", "-p", help="Project ID"),
-    agent: str = typer.Option("coordinator", "--agent", "-a", help="Agent name"),
+    agent: str = typer.Option("ags", "--agent", "-a", help="Agent name"),
     no_stream: bool = typer.Option(False, "--no-stream", help="Disable streaming output"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
     continue_session: bool = typer.Option(False, "--continue", "-c", help="Continue most recent session"),

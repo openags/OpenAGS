@@ -58,7 +58,8 @@ export default function Logs(): React.ReactElement {
 
   const roleColor = (role: string): string => {
     const colors: Record<string, string> = {
-      coordinator: '#4f6ef7',
+      ags: '#4f6ef7',
+      pi: '#4f6ef7',
       literature: '#8b5cf6',
       proposer: '#0ea5e9',
       experimenter: '#22c55e',

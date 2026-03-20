@@ -26,7 +26,7 @@ class SessionManager:
     def create(
         self,
         project_id: str,
-        agent_role: str = "coordinator",
+        agent_role: str = "ags",
         mode: RunMode = RunMode.INTERACTIVE,
         name: str = "",
         agent_name: str = "",

@@ -107,7 +107,7 @@ async def test_chat_returns_response(orchestrator: Orchestrator) -> None:
 
     response = await orchestrator.chat(
         project_id="test-proj",
-        agent_name="coordinator",
+        agent_name="ags",
         messages=messages,
     )
 

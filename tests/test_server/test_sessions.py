@@ -50,14 +50,14 @@ def client(app):
 
 def test_create_session(client):
     # Sessions are scoped to a section (module name)
-    r = client.post("/api/sessions/test-proj/sessions", json={
-        "agent_role": "coordinator",
+    r = client.post("/api/sessions/test-proj/pi", json={
+        "agent_role": "ags",
         "title": "My Chat",
     })
     assert r.status_code == 200
     data = r.json()
     assert data["project_id"] == "test-proj"
-    assert data["agent_role"] == "coordinator"
+    assert data["agent_role"] == "ags"
     assert data["title"] == "My Chat"
     assert "id" in data
 

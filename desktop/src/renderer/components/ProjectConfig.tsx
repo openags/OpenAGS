@@ -160,11 +160,12 @@ export default function ProjectConfig({ projectId, projectName }: Props): React.
             Default Agent Role
           </label>
           <select
-            value={config.default_agent || 'coordinator'}
+            value={config.default_agent || 'ags'}
             onChange={e => setConfig(c => ({ ...c, default_agent: e.target.value }))}
             style={{ ...fieldStyle, background: 'var(--bg-card)' }}
           >
-            <option value="coordinator">Coordinator</option>
+            <option value="ags">AGS</option>
+            <option value="pi">PI</option>
             <option value="literature">Literature</option>
             <option value="proposer">Proposer</option>
             <option value="experimenter">Experimenter</option>

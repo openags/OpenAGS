@@ -45,7 +45,7 @@ class CheckProgressTool:
         discovered = AgentDiscovery.discover(self._workspace)
         modules: dict[str, str] = {}
         for agent_name, config in discovered.items():
-            if agent_name == "coordinator":
+            if agent_name in ("ags", "coordinator"):
                 continue
             # The directory name is the agent name (discovery scans subdirs)
             modules[agent_name] = agent_name
@@ -68,10 +68,23 @@ class CheckProgressTool:
             lines.append("No agent modules discovered.")
             return ToolResult(success=True, data="\n".join(lines))
 
+        from openags.agent.status import parse_status
+
         for module_name, dir_name in sorted(modules.items()):
             mod_dir = self._workspace / dir_name
-            memory_path = mod_dir / "memory.md"
 
+            # Prefer STATUS.md for workflow state
+            agent_status = parse_status(mod_dir)
+            if agent_status and agent_status.status.value != "idle":
+                status_str = agent_status.status.value
+                extra = ""
+                if agent_status.summary:
+                    extra = f" — {agent_status.summary[:80]}"
+                lines.append(f"- **{module_name}**: {status_str}{extra}")
+                continue
+
+            # Fallback: file-based heuristic
+            memory_path = mod_dir / "memory.md"
             has_memory = memory_path.exists() and memory_path.stat().st_size > 10
 
             file_count = 0
@@ -81,7 +94,8 @@ class CheckProgressTool:
                         f.is_file()
                         and "agent" not in str(f)
                         and "sessions" not in str(f)
-                        and f.name != "memory.md"
+                        and f.name not in ("memory.md", "SOUL.md", "DIRECTIVE.md", "STATUS.md",
+                                           "CLAUDE.md", "AGENTS.md", "GEMINI.md")
                     ):
                         file_count += 1
 
@@ -101,6 +115,37 @@ class CheckProgressTool:
             )
 
         parts: list[str] = [f"## {module.title()} Module Status\n"]
+
+        # 0. Workflow status (DIRECTIVE.md + STATUS.md)
+        from openags.agent.directive import parse_directive
+        from openags.agent.status import parse_status
+
+        directive = parse_directive(mod_dir)
+        agent_status = parse_status(mod_dir)
+
+        if agent_status and agent_status.status.value != "idle":
+            parts.append("### Workflow Status")
+            parts.append(f"- **Status**: {agent_status.status.value}")
+            if agent_status.exit_reason:
+                parts.append(f"- **Exit Reason**: {agent_status.exit_reason.value}")
+            if agent_status.quality_self_assessment:
+                parts.append(f"- **Quality**: {agent_status.quality_self_assessment}/5")
+            if agent_status.summary:
+                parts.append(f"- **Summary**: {agent_status.summary[:300]}")
+            if agent_status.error_message:
+                parts.append(f"- **Error**: {agent_status.error_message[:200]}")
+            if agent_status.artifacts:
+                parts.append(f"- **Artifacts**: {', '.join(agent_status.artifacts)}")
+            parts.append("")
+
+        if directive:
+            parts.append("### Current Directive")
+            parts.append(f"- **Action**: {directive.action.value}")
+            parts.append(f"- **Decision**: {directive.decision.value}")
+            parts.append(f"- **Attempt**: {directive.attempt}/{directive.max_attempts}")
+            if directive.task:
+                parts.append(f"- **Task**: {directive.task[:200]}")
+            parts.append("")
 
         # 1. Memory content
         memory_path = mod_dir / "memory.md"

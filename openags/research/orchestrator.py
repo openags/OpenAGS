@@ -184,7 +184,7 @@ class Orchestrator:
                 module_dir=module_dir,
                 memory=memory,
                 backend=self._runtime.get_llm_backend(),
-                tool_registry=self._get_tool_registry(project),
+                tool_registry=self._get_tool_registry(project, agent_name),
                 skill_engine=skill_engine,
                 on_event=event_cb,
             )
@@ -222,15 +222,27 @@ class Orchestrator:
                 pass  # WebSocket may not be available (CLI mode)
         return on_event
 
-    def _get_tool_registry(self, project: Project) -> ToolRegistry:
-        """Get or create a per-project tool registry with workspace-scoped tools."""
-        if project.id not in self._tool_registries:
+    def _get_tool_registry(self, project: Project, agent_name: str = "ags") -> ToolRegistry:
+        """Get or create a per-agent tool registry with workspace scoped to the agent's directory.
+
+        - AGS (root): workspace = project root (can read/write everywhere)
+        - Sub-agents: workspace = their own subdirectory (literature/, proposal/, etc.)
+        """
+        cache_key = f"{project.id}:{agent_name}"
+        if cache_key not in self._tool_registries:
             from openags.agent.tools.ask_user import AskUserTool
             from openags.research.tools.check_progress import CheckProgressTool
             from openags.research.tools.dispatch_agent import DispatchAgentTool
             from openags.agent.tools.sub_agent import SubAgentTool
 
-            registry = create_research_registry(project.workspace)
+            # AGS/coordinator (root) gets project root, sub-agents get their own directory
+            if agent_name in ("ags", "coordinator", "root"):
+                workspace = project.workspace
+            else:
+                workspace = project.workspace / agent_name
+                workspace.mkdir(parents=True, exist_ok=True)
+
+            registry = create_research_registry(workspace)
 
             # SubAgent: needs backend + registry
             backend = self._runtime.get_llm_backend()
@@ -247,15 +259,15 @@ class Orchestrator:
             for tool in getattr(self, "_mcp_tools", []):
                 registry.register(tool)
 
-            self._tool_registries[project.id] = registry
-            logger.info("Created tool registry for project '%s' (%d tools)",
-                        project.id, len(self._tool_registries[project.id].list_names()))
-        return self._tool_registries[project.id]
+            self._tool_registries[cache_key] = registry
+            logger.info("Created tool registry for %s:%s (%d tools, workspace=%s)",
+                        project.id, agent_name, len(registry.list_names()), workspace)
+        return self._tool_registries[cache_key]
 
     def _get_session_mgr(self, agent_name: str, project: Project) -> SessionManager:
         """Get a SessionManager for the module corresponding to an agent name."""
-        # Coordinator (root) stores sessions in .openags, others in their module dir
-        if agent_name == "coordinator":
+        # AGS/coordinator (root) stores sessions in .openags, others in their module dir
+        if agent_name in ("ags", "coordinator"):
             session_dir = project.workspace / ".openags"
         else:
             session_dir = project.workspace / agent_name
@@ -269,7 +281,7 @@ class Orchestrator:
         skill_dirs: list[Path] = []
 
         # Module-level skills (e.g. literature/skills/)
-        if agent_name != "coordinator":
+        if agent_name not in ("ags", "coordinator"):
             module_skills = project.workspace / agent_name / "skills"
             if module_skills.exists():
                 skill_dirs.append(module_skills)
@@ -304,6 +316,9 @@ class Orchestrator:
         logger.info("Running agent[%s] on project '%s' (runtime=%s)",
                      agent_name, project_id, self._runtime.runtime_type)
 
+        from datetime import datetime as _dt, timezone as _tz
+        started_at = _dt.now(tz=_tz.utc)
+
         backend_type = self._runtime.runtime_type
 
         if backend_type == "builtin":
@@ -313,6 +328,14 @@ class Orchestrator:
         else:
             # Path 2: CLI agent — spawn CLI process in the agent's folder
             result = await self._run_cli_agent(project, agent_name, task)
+
+        # Write STATUS.md (workflow protocol)
+        from openags.agent.directive import parse_directive
+        from openags.agent.status import write_status_from_result
+        agent_dir = project.workspace if agent_name in ("ags", "coordinator", "root") else project.workspace / agent_name
+        directive = parse_directive(agent_dir)
+        directive_id = directive.directive_id if directive else "none"
+        write_status_from_result(agent_dir, directive_id, agent_name, result, started_at)
 
         # Write checkpoint after agent completes
         self._write_checkpoint(project, agent_name, task, result)
@@ -445,7 +468,7 @@ class Orchestrator:
             )
 
         logger.info("Starting Coordinator-driven pipeline for '%s'", project_id)
-        result = await self.run_agent(project_id, "coordinator", coordinator_task, mode)
+        result = await self.run_agent(project_id, "ags", coordinator_task, mode)
         return [result]
 
     async def chat(
@@ -490,7 +513,18 @@ class Orchestrator:
                 )
                 task = f"[Prior conversation]\n{prior_context}\n\n[Current request]\n{task}"
 
+        from datetime import datetime as _dt, timezone as _tz
+        chat_started = _dt.now(tz=_tz.utc)
+
         result = await agent.loop(task)
+
+        # Write STATUS.md (workflow protocol)
+        from openags.agent.directive import parse_directive
+        from openags.agent.status import write_status_from_result
+        agent_dir = project.workspace if agent_name in ("ags", "coordinator", "root") else project.workspace / agent_name
+        directive = parse_directive(agent_dir)
+        directive_id = directive.directive_id if directive else "none"
+        write_status_from_result(agent_dir, directive_id, agent_name, result, chat_started)
 
         # Build a BackendResponse from AgentResult
         response = BackendResponse(

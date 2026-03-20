@@ -9,6 +9,7 @@ import {
   Construction,
   FileText,
   FlaskConical,
+  GraduationCap,
   Library,
   Lightbulb,
   MessageSquare,
@@ -27,6 +28,7 @@ import ManuscriptEditor from '../components/ManuscriptEditor'
 import ProjectConfig from '../components/ProjectConfig'
 import AgentConfigPanel from '../components/AgentConfigPanel'
 import TerminalPanel from '../components/TerminalPanel'
+import AGSDashboard from '../components/AGSDashboard'
 import {
   ChatMessage,
   ChatThread,
@@ -50,7 +52,8 @@ const CLI_COMMANDS: Record<string, string> = {
 
 /** Section → subfolder mapping (root for sessions) */
 const SECTION_FOLDERS: Record<string, string> = {
-  sessions: '',
+  ags: '',
+  pi: 'pi',
   literature: 'literature',
   proposal: 'proposal',
   experiments: 'experiments',
@@ -323,14 +326,23 @@ interface SectionMeta {
 }
 
 const SECTION_META: Record<string, SectionMeta> = {
-  sessions: {
-    Icon: MessageSquare,
-    title: 'Sessions',
-    description: 'Free discussion related to this project (outside workflow).',
+  ags: {
+    Icon: Bot,
+    title: 'AGS',
+    description: 'Autonomous research coordinator.',
+    color: '#3b82f6',
+    chatEnabled: true,
+    agentRole: 'ags',
+    agentLabel: 'AGS - Coordinator',
+  },
+  pi: {
+    Icon: GraduationCap,
+    title: 'PI',
+    description: 'Research advisor and brainstorm partner.',
     color: '#4f6ef7',
     chatEnabled: true,
-    agentRole: 'coordinator',
-    agentLabel: 'General Chat Agent',
+    agentRole: 'pi',
+    agentLabel: 'PI - Research Advisor',
   },
   literature: {
     Icon: BookOpen,
@@ -499,6 +511,12 @@ export default function Project(): React.ReactElement {
   const [manuscriptChatHeight, setManuscriptChatHeight] = useState(300)
   const [backendType, setBackendType] = useState<string>('builtin')
   const [terminalOpen, setTerminalOpen] = useState(false)
+  // AGS auto-mode state
+  const [autoState, setAutoState] = useState<'idle' | 'running' | 'paused'>('idle')
+  const [autoRunningModule, setAutoRunningModule] = useState<string | null>(null)
+  const [autoStatuses, setAutoStatuses] = useState<Record<string, string>>({})
+  const workflowWsRef = useRef<WebSocket | null>(null)
+  const agsSessionIdRef = useRef<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -551,13 +569,166 @@ export default function Project(): React.ReactElement {
   const terminalCwd = useMemo(() => {
     if (!project || !workspaceDir) return ''
     const baseDir = `${workspaceDir}/projects/${project.id}`
-    const subfolder = SECTION_FOLDERS[section || 'sessions'] || ''
+    const subfolder = SECTION_FOLDERS[section || 'pi'] || ''
     return subfolder ? `${baseDir}/${subfolder}` : baseDir
   }, [project, section, workspaceDir])
 
   const terminalSessionId = useMemo(() => {
-    return `${id || 'unknown'}:${section || 'sessions'}`
+    return `${id || 'unknown'}:${section || 'pi'}`
   }, [id, section])
+
+  // Workflow WebSocket: connect when on AGS section or auto-mode active
+  const needsWorkflowWs = (section === 'ags' || autoState !== 'idle') && !!id
+  useEffect(() => {
+    if (!needsWorkflowWs) return
+    const host = window.location.port === '5173' ? 'localhost:3001' : window.location.host
+    const ws = new WebSocket(`ws://${host}/workflow`)
+    workflowWsRef.current = ws
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'workflow.subscribe', projectId: id }))
+    }
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data)
+        if (msg.type === 'auto.pipeline') {
+          const agents = msg.agents as Record<string, string | { status: string }> | undefined
+          if (agents) {
+            const s: Record<string, string> = {}
+            for (const [k, v] of Object.entries(agents)) s[k] = (typeof v === 'string' ? v : v.status) || 'idle'
+            setAutoStatuses(s)
+          }
+          if (msg.status === 'running') setAutoState('running')
+          else if (msg.status === 'paused') setAutoState('paused')
+          else if (msg.status === 'stopped' || msg.status === 'complete') setAutoState('idle')
+        } else if (msg.type === 'auto.start') {
+          setAutoRunningModule(msg.module || null)
+          // Inject task as user message + empty assistant into module's ChatThread
+          const startMod = msg.module as string
+          const startTask = msg.task as string || ''
+          if (startMod && id) {
+            const key = getChatKey(id, startMod)
+            setThreadsByKey(prev => {
+              const threads = prev[key]
+              if (!threads || threads.length === 0) {
+                return { ...prev, [key]: [{ id: makeThreadId(), title: `${startMod} Chat`, messages: [{ role: 'user' as const, content: startTask }, { role: 'assistant' as const, content: '' }] }] }
+              }
+              const t = threads[0]
+              return { ...prev, [key]: [{ ...t, messages: [...t.messages, { role: 'user' as const, content: startTask }, { role: 'assistant' as const, content: '' }] }, ...threads.slice(1)] }
+            })
+          }
+        } else if (msg.type === 'auto.text') {
+          // Append text to the last assistant message in module's ChatThread
+          const textMod = msg.module as string
+          const textContent = typeof msg.content === 'string' ? msg.content : typeof msg.data === 'string' ? msg.data : ''
+          if (textMod && textContent && id) {
+            const key = getChatKey(id, textMod)
+            setThreadsByKey(prev => {
+              const threads = prev[key]
+              if (!threads?.[0]) return prev
+              const t = threads[0]
+              const msgs = [...t.messages]
+              if (msgs.length > 0 && msgs[msgs.length - 1].role === 'assistant') {
+                msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content: msgs[msgs.length - 1].content + textContent }
+              }
+              return { ...prev, [key]: [{ ...t, messages: msgs }, ...threads.slice(1)] }
+            })
+          }
+        } else if (msg.type === 'auto.done') {
+          setAutoRunningModule(null)
+        } else if (msg.type === 'auto.ags-trigger') {
+          // Orchestrator wants AGS to evaluate — forward via the SAME chat session using agsSessionIdRef
+          const triggerMsg = msg.message as string || '[STATUS_UPDATE] A sub-agent completed. Evaluate and continue.'
+          if (cliWsRef.current?.readyState === WebSocket.OPEN && id) {
+            const agsKey = getChatKey(id, 'ags')
+            // Add to AGS thread
+            setThreadsByKey(prev => {
+              const threads = prev[agsKey]
+              if (!threads?.[0]) return prev
+              const t = threads[0]
+              return { ...prev, [agsKey]: [{ ...t, messages: [...t.messages, { role: 'user' as const, content: triggerMsg }, { role: 'assistant' as const, content: '' }] }, ...threads.slice(1)] }
+            })
+            cliWsRef.current.send(JSON.stringify({
+              type: 'chat',
+              provider: backendType,
+              command: triggerMsg,
+              cwd: workspaceDir ? `${workspaceDir}/projects/${id}` : '',
+              sessionId: agsSessionIdRef.current || undefined,
+              permissionMode: 'bypassPermissions',
+            }))
+          }
+        } else if (msg.type === 'auto.session-created') {
+          const mod = msg.module as string
+          const sid = msg.sessionId as string
+          if (mod && sid && id) {
+            const key = getChatKey(id, mod)
+            setThreadsByKey(prev => {
+              const threads = prev[key]
+              if (!threads || threads.length === 0) {
+                return { ...prev, [key]: [{ id: makeThreadId(), title: `${mod} Chat`, messages: [], providerSessionId: sid }] }
+              }
+              return { ...prev, [key]: threads.map((t, i) => i === 0 ? { ...t, providerSessionId: sid } : t) }
+            })
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    ws.onclose = () => { workflowWsRef.current = null }
+    return () => { ws.close(); workflowWsRef.current = null }
+  }, [needsWorkflowWs, id])
+
+  const workflowSend = (type: string, extra?: Record<string, unknown>) => {
+    const ws = workflowWsRef.current
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type, projectId: id, ...extra }))
+    }
+  }
+  /** Start auto — send @@AUTO_MODE_START via normal chat + start orchestrator for pipeline */
+  const handleAutoStart = () => {
+    if (!project || !workspaceDir) return
+    // Start orchestrator for pipeline monitoring + sub-agent dispatch
+    const projectDir = `${workspaceDir}/projects/${project.id}`
+    const store = loadThreadStore()
+    const sessionIds: Record<string, string> = {}
+    for (const mod of ['literature', 'proposal', 'experiments', 'manuscript', 'review', 'pi', 'ags']) {
+      const key = getChatKey(project.id, mod)
+      const threads = store[key]
+      if (threads?.[0]?.providerSessionId) sessionIds[mod] = threads[0].providerSessionId
+    }
+    // Initialize AGS session ref from existing thread
+    const agsKey = getChatKey(project.id, 'ags')
+    agsSessionIdRef.current = store[agsKey]?.[0]?.providerSessionId || null
+    workflowSend('workflow.start', { projectDir, backendType, sessionIds })
+    setAutoState('running')
+    // Send the protocol command via normal chat (same cliWsRef as any section)
+    if (cliWsRef.current?.readyState === WebSocket.OPEN) {
+      // Add user message to thread
+      const key = chatKeyRef.current
+      const thread = activeThreadRef.current
+      if (key && thread) {
+        setThreadsByKey(prev => ({
+          ...prev,
+          [key]: (prev[key] || []).map(t =>
+            t.id === thread.id
+              ? { ...t, messages: [...t.messages, { role: 'user' as const, content: '@@AUTO_MODE_START' }, { role: 'assistant' as const, content: '' }] }
+              : t
+          ),
+        }))
+        setSending(true)
+        cliWsRef.current.send(JSON.stringify({
+          type: 'chat',
+          provider: backendType,
+          command: '@@AUTO_MODE_START',
+          cwd: terminalCwd,
+          sessionId: thread.providerSessionId || undefined,
+          permissionMode: 'bypassPermissions',
+        }))
+      }
+    }
+  }
+  const handleAutoPause = () => { workflowSend('workflow.pause'); setAutoState('paused') }
+  const handleAutoResume = () => { workflowSend('workflow.resume'); setAutoState('running') }
+  const handleAutoStop = () => { workflowSend('workflow.stop'); setAutoState('idle'); setAutoRunningModule(null) }
 
   // CLI chat WebSocket ref
   const cliWsRef = useRef<WebSocket | null>(null)
@@ -595,7 +766,8 @@ export default function Project(): React.ReactElement {
     if (!isCliBackend) return
 
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${proto}//${window.location.host}/chat`)
+    const host = window.location.port === '5173' ? 'localhost:3001' : window.location.host
+    const ws = new WebSocket(`${proto}//${host}/chat`)
     cliWsRef.current = ws
 
     ws.onmessage = (event) => {
@@ -613,6 +785,19 @@ export default function Project(): React.ReactElement {
                 t.id === thread.id ? { ...t, providerSessionId: msg.sessionId } : t
               ),
             }))
+          }
+          // Always update AGS ref if auto-mode is active (response may arrive while on a different section)
+          if (autoState !== 'idle' && !agsSessionIdRef.current) {
+            agsSessionIdRef.current = msg.sessionId
+            // Also save to AGS thread in localStorage
+            if (id) {
+              const agsKey = getChatKey(id, 'ags')
+              setThreadsByKey(prev => {
+                const threads = prev[agsKey]
+                if (!threads?.[0]) return prev
+                return { ...prev, [agsKey]: threads.map((t, i) => i === 0 ? { ...t, providerSessionId: msg.sessionId } : t) }
+              })
+            }
           }
         } else if (msg.type === 'text' && msg.content) {
           updateLastAssistant(c => c + msg.content)
@@ -723,7 +908,7 @@ export default function Project(): React.ReactElement {
     }))
   }
 
-  const activeSection = section || 'sessions'
+  const activeSection = section || 'pi'
   const meta = SECTION_META[activeSection] || SECTION_META.sessions
   const chatKey = useMemo(() => getChatKey(id || 'unknown', activeSection), [id, activeSection])
 
@@ -735,11 +920,14 @@ export default function Project(): React.ReactElement {
     if (existing[chatKey] && existing[chatKey].length > 0) return
 
     // Try loading sessions from backend first
+    const isSingleSession = activeSection !== 'pi'  // Only PI allows multiple sessions
     api.sessions.list(id, activeSection)
       .then((serverSessions) => {
         if (serverSessions.length > 0) {
           // Restore threads from server sessions
-          const restored: ChatThread[] = serverSessions.map((s) => ({
+          // Non-PI sections: only keep the first session (single session per module)
+          const toRestore = isSingleSession ? [serverSessions[0]] : serverSessions
+          const restored: ChatThread[] = toRestore.map((s) => ({
             id: makeThreadId(),
             title: s.title || `Chat`,
             messages: (s.messages || []).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
@@ -791,12 +979,11 @@ export default function Project(): React.ReactElement {
   activeThreadRef.current = activeThread
   chatKeyRef.current = chatKey
 
-  // Reset sending state when switching threads/sections
+  // Reset state when switching threads/sections/projects
   useEffect(() => {
     setSending(false)
-  }, [threadId, activeSection])
+  }, [threadId, activeSection, id])
 
-  // Auto-scroll to bottom on new messages, content updates, and thread switch
   const scrollToBottom = () => {
     // Scroll all possible message containers to bottom
     const container = messagesContainerRef.current
@@ -1070,7 +1257,7 @@ export default function Project(): React.ReactElement {
           </div>
         )}
         {/* Agent config (non-sessions sections) */}
-        {meta.chatEnabled && activeSection !== 'sessions' && (
+        {meta.chatEnabled && activeSection !== 'pi' && (
           <div
             onClick={() => setAgentPanelOpen(!agentPanelOpen)}
             style={{
@@ -1087,10 +1274,80 @@ export default function Project(): React.ReactElement {
             <Bot size={15} strokeWidth={2} />
           </div>
         )}
+        {/* AGS Auto button — navigates to AGS section */}
+        <div
+          onClick={() => { if (id) navigate(`/project/${id}/ags`) }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px',
+            borderRadius: 8, cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', fontSize: 12, fontWeight: 600,
+            background: activeSection === 'ags' ? '#3b82f6' : autoState !== 'idle' ? '#3b82f618' : 'var(--bg-sidebar)',
+            color: activeSection === 'ags' ? '#fff' : autoState !== 'idle' ? '#3b82f6' : 'var(--text-tertiary)',
+            border: `1px solid ${activeSection === 'ags' ? '#3b82f6' : autoState !== 'idle' ? '#3b82f640' : 'var(--border)'}`,
+          }}
+          title="AGS Auto Mode"
+        >
+          🤖 AGS{autoState !== 'idle' ? (autoState === 'running' ? ' ●' : ' ⏸') : ''}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      {/* AGS pipeline + controls — always visible when on AGS section */}
+      {activeSection === 'ags' && project && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+          background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
+        }}>
+          {/* Auto-mode controls */}
+          <div style={{
+            padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 10,
+            borderBottom: '1px solid var(--border)',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>AGS Auto</span>
+            {autoState !== 'idle' && (
+              <span style={{
+                fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 12,
+                background: autoState === 'running' ? '#3b82f618' : '#f59e0b18',
+                color: autoState === 'running' ? '#3b82f6' : '#f59e0b',
+              }}>
+                {autoState === 'running' ? (autoRunningModule ? `Running: ${autoRunningModule}` : 'Evaluating...') : 'Paused'}
+              </span>
+            )}
+            <div style={{ flex: 1 }} />
+            {autoState === 'idle' && (
+              <button onClick={handleAutoStart} style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px',
+                borderRadius: 7, border: 'none', background: '#3b82f6', color: '#fff',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}>Start Auto</button>
+            )}
+            {autoState === 'running' && (
+              <button onClick={handleAutoPause} style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px',
+                borderRadius: 7, border: 'none', background: '#f59e0b', color: '#fff',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}>Pause</button>
+            )}
+            {autoState === 'paused' && (
+              <button onClick={handleAutoResume} style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px',
+                borderRadius: 7, border: 'none', background: '#3b82f6', color: '#fff',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}>Resume</button>
+            )}
+            {autoState !== 'idle' && (
+              <span onClick={handleAutoStop} style={{ fontSize: 11, color: 'var(--text-tertiary)', cursor: 'pointer', textDecoration: 'underline' }}>Stop</span>
+            )}
+          </div>
+          {/* Pipeline */}
+          <AGSDashboard
+            autoState={autoState}
+            runningModule={autoRunningModule}
+            agentStatuses={autoStatuses}
+            onNavigateModule={(mod) => { navigate(`/project/${project.id}/${mod}`) }}
+          />
+        </div>
+      )}
       {activeSection === 'manuscript' && project ? (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           {/* Editor takes remaining space */}
@@ -1180,7 +1437,7 @@ export default function Project(): React.ReactElement {
                         <div key={`ms-${idx}`} style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, padding: '0 4px' }}>
                           <div style={{
                             maxWidth: 'min(75%, 600px)', padding: '6px 10px', borderRadius: 10,
-                            background: 'var(--accent)', color: '#fff',
+                            background: 'var(--user-bubble)', color: 'var(--user-bubble-text)',
                             whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: 13, wordBreak: 'break-word',
                           }}>{m.content}</div>
                         </div>
@@ -1287,7 +1544,7 @@ export default function Project(): React.ReactElement {
                         style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10, padding: '0 8px' }}>
                         <div style={{
                           maxWidth: 'min(80%, 640px)', padding: '8px 14px', borderRadius: 12,
-                          background: 'var(--accent)', color: '#fff',
+                          background: 'var(--user-bubble)', color: 'var(--user-bubble-text)',
                           whiteSpace: 'pre-wrap', lineHeight: 1.55, fontSize: 14, wordBreak: 'break-word',
                         }}>
                           {m.content}
@@ -1466,7 +1723,7 @@ export default function Project(): React.ReactElement {
                       style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10, padding: '0 8px' }}>
                       <div style={{
                         maxWidth: 'min(80%, 640px)', padding: '8px 14px', borderRadius: 12,
-                        background: 'var(--accent)', color: '#fff',
+                        background: 'var(--user-bubble)', color: 'var(--user-bubble-text)',
                         whiteSpace: 'pre-wrap', lineHeight: 1.55, fontSize: 14, wordBreak: 'break-word',
                       }}>
                         {m.content}
@@ -1667,7 +1924,7 @@ export default function Project(): React.ReactElement {
         </>
       )}
       </div>
-      {agentPanelOpen && project && meta.chatEnabled && activeSection !== 'sessions' && (
+      {agentPanelOpen && project && meta.chatEnabled && activeSection !== 'pi' && (
         <AgentConfigPanel
           projectId={project.id}
           section={activeSection}

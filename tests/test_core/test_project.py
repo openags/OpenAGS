@@ -23,7 +23,7 @@ class TestProjectManager:
         # Check standard directories were created
         assert (project.workspace / "literature" / "papers").is_dir()
         assert (project.workspace / "experiments" / "code").is_dir()
-        assert (project.workspace / "manuscript" / "drafts").is_dir()
+        assert (project.workspace / "manuscript" / "figures").is_dir()
         assert (project.workspace / "literature" / "memory.md").exists()
         assert (project.workspace / ".openags" / "history.md").exists()
 

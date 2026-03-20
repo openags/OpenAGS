@@ -68,7 +68,7 @@ class TestBaseAgent:
         memory = MemorySystem(temp_project.workspace)
         memory.update_memory("focus", "Protein folding")
 
-        agent = _make_agent("coordinator", mock_backend, memory)
+        agent = _make_agent("ags", mock_backend, memory)
         await agent.run("What should I do next?")
 
         assert "Protein folding" in mock_backend.last_prompt

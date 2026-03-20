@@ -95,7 +95,7 @@ class BotHandler:
 
     async def _run(self, project_id: str, task: str) -> str:
         try:
-            result = await self._orch.run_agent(project_id, "coordinator", task)  # type: ignore[attr-defined]
+            result = await self._orch.run_agent(project_id, "ags", task)  # type: ignore[attr-defined]
             if result.success:
                 output = result.output[:500]
                 return f"Done ({result.duration_seconds:.1f}s)\n\n{output}"
@@ -106,7 +106,7 @@ class BotHandler:
     async def _chat(self, project_id: str, message: str, chat_id: str) -> str:
         try:
             messages = [{"role": "user", "content": message}]
-            response = await self._orch.chat(project_id, "coordinator", messages)  # type: ignore[attr-defined]
+            response = await self._orch.chat(project_id, "ags", messages)  # type: ignore[attr-defined]
             return response.content[:1000]
         except Exception as e:
             return f"Error: {e}"

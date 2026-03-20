@@ -58,6 +58,8 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
   const [activeTab, setActiveTab] = useState<string | null>(null)
   const [contents, setContents] = useState<Record<string, string>>({})
   const [dirty, setDirty] = useState<Record<string, boolean>>({})
+  const [previewWidth, setPreviewWidth] = useState(50) // percentage
+  const [draggingDivider, setDraggingDivider] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [compiling, setCompiling] = useState(false)
@@ -106,9 +108,35 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
 
   useEffect(() => {
     void loadTree()
-  }, [loadTree])
+    // Auto-load existing main.pdf if present
+    fetch(`${BASE_URL}/api/manuscript/${projectId}/pdf/main.pdf?t=${Date.now()}`)
+      .then(resp => {
+        if (resp.ok) return resp.blob()
+        return null
+      })
+      .then(blob => {
+        if (blob && blob.size > 0) {
+          setPdfUrl(URL.createObjectURL(blob))
+          setShowPreview(true)
+        }
+      })
+      .catch(() => {})
+  }, [loadTree, projectId])
 
   const openFile = async (path: string, name: string) => {
+    // PDF files: load in preview panel instead of editor
+    if (name.endsWith('.pdf')) {
+      try {
+        if (pdfUrl && pdfUrl.startsWith('blob:')) URL.revokeObjectURL(pdfUrl)
+        const resp = await fetch(`${BASE_URL}/api/manuscript/${projectId}/pdf/${path}?t=${Date.now()}`)
+        if (resp.ok) {
+          const blob = await resp.blob()
+          setPdfUrl(URL.createObjectURL(blob))
+          setShowPreview(true)
+        }
+      } catch { /* ignore */ }
+      return
+    }
     if (!openTabs.find(t => t.path === path)) {
       setOpenTabs(prev => [...prev, { path, name }])
     }
@@ -394,7 +422,9 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
       ? <FileText size={13} color="#4f6ef7" />
       : entry.name.endsWith('.bib')
         ? <FileText size={13} color="#22c55e" />
-        : <File size={13} color="var(--text-tertiary)" />
+        : entry.name.endsWith('.pdf')
+          ? <FileText size={13} color="#ef4444" />
+          : <File size={13} color="var(--text-tertiary)" />
 
     return (
       <div
@@ -444,19 +474,19 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} onClick={() => { setContextMenu(null); setDeleteConfirm(null) }}>
       {/* Main editor area — NO separate header bar; controls are in tab bar */}
       <div style={{
-        flex: 1, display: 'grid',
-        gridTemplateColumns: fileTreeCollapsed
-          ? (showPreview ? '36px 1fr 1fr' : '36px 1fr')
-          : (showPreview ? '200px 1fr 1fr' : '200px 1fr'),
+        flex: 1, display: 'flex',
         overflow: 'hidden',
-        transition: 'grid-template-columns 0.2s ease',
+        minHeight: 0,
       }}>
         {/* File tree */}
         <div style={{
+          width: fileTreeCollapsed ? 36 : 200,
+          flexShrink: 0,
           borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column',
           background: 'var(--bg-sidebar)',
-          overflow: 'hidden',
+          minHeight: 0,
+          transition: 'width 0.15s',
         }}>
           {fileTreeCollapsed ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8, gap: 4 }}>
@@ -508,7 +538,7 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
         </div>
 
         {/* Editor */}
-        <div style={{ display: 'flex', flexDirection: 'column', borderRight: showPreview ? '1px solid var(--border)' : 'none' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
           {/* Tab bar with Save / Compile / Preview merged in */}
           <div style={{
             display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border-light)',
@@ -574,12 +604,12 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
 
           {/* Editor area — CodeMirror */}
           {activeTab ? (
-            <div style={{ flex: 1, overflow: 'hidden' }}>
+            <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
               <CodeEditor
                 value={activeContent}
                 onChange={(val) => {
                   if (activeTab) {
-                    setFileContents(prev => ({ ...prev, [activeTab]: val }))
+                    setContents(prev => ({ ...prev, [activeTab]: val }))
                     setDirty(prev => ({ ...prev, [activeTab]: true }))
                   }
                 }}
@@ -615,17 +645,54 @@ export default function ManuscriptEditor({ projectId, projectName }: Props): Rea
           </div>
         </div>
 
+        {/* Draggable divider */}
+        {showPreview && (
+          <div
+            style={{
+              width: 5, cursor: 'col-resize', flexShrink: 0,
+              background: draggingDivider ? 'var(--accent)' : 'var(--border)',
+            }}
+            onMouseEnter={e => { if (!draggingDivider) e.currentTarget.style.background = 'var(--accent)' }}
+            onMouseLeave={e => { if (!draggingDivider) e.currentTarget.style.background = 'var(--border)' }}
+            onMouseDown={e => {
+              e.preventDefault()
+              const container = e.currentTarget.parentElement
+              if (!container) return
+              setDraggingDivider(true)
+              const startX = e.clientX
+              const startWidth = previewWidth
+              const totalWidth = container.getBoundingClientRect().width
+              const onMove = (ev: MouseEvent) => {
+                const delta = startX - ev.clientX
+                const newPct = startWidth + (delta / totalWidth) * 100
+                setPreviewWidth(Math.max(20, Math.min(70, newPct)))
+              }
+              const onUp = () => {
+                setDraggingDivider(false)
+                document.removeEventListener('mousemove', onMove)
+                document.removeEventListener('mouseup', onUp)
+              }
+              document.addEventListener('mousemove', onMove)
+              document.addEventListener('mouseup', onUp)
+            }}
+          />
+        )}
+        {/* Overlay during drag — prevents iframe from eating mouse events */}
+        {draggingDivider && <div style={{ position: 'fixed', inset: 0, zIndex: 9999, cursor: 'col-resize' }} />}
+
         {/* PDF Preview */}
         {showPreview && (
-          <div style={{ display: 'flex', flexDirection: 'column', background: '#f9f9f9' }}>
+          <div style={{ width: `${previewWidth}%`, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, background: '#f9f9f9' }}>
             <div style={{
               padding: '8px 12px', borderBottom: '1px solid var(--border-light)',
-              fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)',
+              fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', flexShrink: 0,
             }}>
               {t('manuscript.pdfPreview')}
             </div>
             {pdfUrl ? (
-              <embed src={pdfUrl} type="application/pdf" style={{ flex: 1, width: '100%', height: '100%' }} />
+              <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+                <iframe src={pdfUrl} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} />
+              </div>
             ) : (
               <div style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',

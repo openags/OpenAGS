@@ -71,6 +71,7 @@ def create_app() -> FastAPI:
         projects,
         sessions,
         skills,
+        workflow,
         ws,
     )
 
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(config.router, prefix="/api/config", tags=["config"])
     app.include_router(logs.router, prefix="/api/logs", tags=["logs"])
     app.include_router(manuscript.router, prefix="/api/manuscript", tags=["manuscript"])
+    app.include_router(workflow.router, prefix="/api/workflow", tags=["workflow"])
     app.include_router(ws.router, prefix="/ws", tags=["websocket"])
 
     @app.get("/api/health")
