@@ -15,9 +15,8 @@ mac:
   target:
     - dmg
     - zip
-  hardenedRuntime: true
-  entitlements: resources/entitlements.mac.plist
-  entitlementsInherit: resources/entitlements.mac.plist
+  icon: resources/icon.icns
+  identity: null
 
 win:
   target:
