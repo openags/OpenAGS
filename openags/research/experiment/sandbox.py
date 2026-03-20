@@ -33,12 +33,10 @@ class Sandbox(ABC):
     """Abstract sandbox — all execution environments implement this."""
 
     @abstractmethod
-    async def execute(self, command: str, env: dict[str, str] | None = None) -> ExecutionResult:
-        ...
+    async def execute(self, command: str, env: dict[str, str] | None = None) -> ExecutionResult: ...
 
     @abstractmethod
-    async def cleanup(self) -> None:
-        ...
+    async def cleanup(self) -> None: ...
 
 
 # ── Local sandbox ──────────────────────────────────────
@@ -113,15 +111,21 @@ class DockerSandbox(Sandbox):
                 env_args.extend(["-e", f"{k}={v}"])
 
         docker_cmd = [
-            "docker", "run", "--rm",
+            "docker",
+            "run",
+            "--rm",
             "--network=none",
             f"--memory={self._memory}",
             f"--cpus={self._cpus}",
-            "-v", f"{self._cwd}:/workspace:rw",
-            "-w", "/workspace",
+            "-v",
+            f"{self._cwd}:/workspace:rw",
+            "-w",
+            "/workspace",
             *env_args,
             self._image,
-            "sh", "-c", command,
+            "sh",
+            "-c",
+            command,
         ]
 
         try:
@@ -148,7 +152,9 @@ class DockerSandbox(Sandbox):
         if self._container_id:
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "docker", "kill", self._container_id,
+                    "docker",
+                    "kill",
+                    self._container_id,
                     stdout=asyncio.subprocess.DEVNULL,
                     stderr=asyncio.subprocess.DEVNULL,
                 )
@@ -175,8 +181,8 @@ class SandboxFactory:
         if self._mode == SandboxMode.DOCKER:
             return DockerSandbox(working_dir, timeout, **kwargs)
         if self._mode == SandboxMode.REMOTE:
-            from openags.research.experiment.ssh_executor import SSHSandbox
             from openags.models import RemoteServer
+            from openags.research.experiment.ssh_executor import SSHSandbox
 
             server = kwargs.get("server")  # type: ignore[assignment]
             if isinstance(server, RemoteServer):

@@ -133,9 +133,7 @@ class UserManager:
 
     def _save_tokens(self) -> None:
         self._tokens_file.parent.mkdir(parents=True, exist_ok=True)
-        self._tokens_file.write_text(
-            json.dumps(self._tokens), encoding="utf-8"
-        )
+        self._tokens_file.write_text(json.dumps(self._tokens), encoding="utf-8")
         try:
             self._tokens_file.chmod(0o600)
         except OSError:

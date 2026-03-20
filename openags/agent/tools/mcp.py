@@ -61,6 +61,7 @@ class MCPClient:
         cmd.extend(self._config.args)
 
         import os
+
         env = {**os.environ, **self._config.env}
 
         self._process = await asyncio.create_subprocess_exec(
@@ -72,11 +73,14 @@ class MCPClient:
         )
 
         # Initialize MCP protocol
-        await self._send_request("initialize", {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "openags", "version": "0.1.0"},
-        })
+        await self._send_request(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "openags", "version": "0.1.0"},
+            },
+        )
 
         # Send initialized notification
         await self._send_notification("notifications/initialized", {})
@@ -101,10 +105,13 @@ class MCPClient:
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> str:
         """Call a tool on the MCP server and return the result text."""
-        result = await self._send_request("tools/call", {
-            "name": tool_name,
-            "arguments": arguments,
-        })
+        result = await self._send_request(
+            "tools/call",
+            {
+                "name": tool_name,
+                "arguments": arguments,
+            },
+        )
 
         if result is None:
             return "Error: No response from MCP server"
@@ -291,10 +298,12 @@ class MCPManager:
 
         configs: list[MCPServerConfig] = []
         for name, spec in servers.items():
-            configs.append(MCPServerConfig(
-                name=name,
-                command=spec.get("command", ""),
-                args=spec.get("args", []),
-                env=spec.get("env", {}),
-            ))
+            configs.append(
+                MCPServerConfig(
+                    name=name,
+                    command=spec.get("command", ""),
+                    args=spec.get("args", []),
+                    env=spec.get("env", {}),
+                )
+            )
         return configs

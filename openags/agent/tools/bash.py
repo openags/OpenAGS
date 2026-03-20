@@ -15,20 +15,22 @@ MAX_OUTPUT_CHARS = 50_000
 MAX_TIMEOUT = 600
 
 # Commands that should never be executed
-_DANGEROUS_PATTERNS = frozenset({
-    "rm -rf /",
-    "rm -rf /*",
-    "mkfs",
-    "dd if=",
-    ":(){",
-    "> /dev/sd",
-    "> /dev/nv",
-    "chmod -R 777 /",
-    "shutdown",
-    "reboot",
-    "init 0",
-    "init 6",
-})
+_DANGEROUS_PATTERNS = frozenset(
+    {
+        "rm -rf /",
+        "rm -rf /*",
+        "mkfs",
+        "dd if=",
+        ":(){",
+        "> /dev/sd",
+        "> /dev/nv",
+        "chmod -R 777 /",
+        "shutdown",
+        "reboot",
+        "init 0",
+        "init 6",
+    }
+)
 
 
 class BashExecuteTool:
@@ -39,7 +41,9 @@ class BashExecuteTool:
     """
 
     _name = "bash"
-    _description = "Run a shell command in the project workspace directory. Returns stdout and stderr."
+    _description = (
+        "Run a shell command in the project workspace directory. Returns stdout and stderr."
+    )
 
     def __init__(self, workspace: Path) -> None:
         self._workspace = workspace
@@ -98,7 +102,9 @@ class BashExecuteTool:
             if not output:
                 output = "(no output)"
             elif len(output) > MAX_OUTPUT_CHARS:
-                output = output[:MAX_OUTPUT_CHARS] + f"\n... (truncated at {MAX_OUTPUT_CHARS} chars)"
+                output = (
+                    output[:MAX_OUTPUT_CHARS] + f"\n... (truncated at {MAX_OUTPUT_CHARS} chars)"
+                )
 
             return ToolResult(
                 success=proc.returncode == 0,

@@ -10,8 +10,8 @@ from pydantic import BaseModel
 
 from openags.agent.discovery import AgentDiscovery
 from openags.agent.errors import AgentError, BackendError, ProjectError
-from openags.research.orchestrator import Orchestrator
 from openags.models import AgentResult, RunMode, StepResult
+from openags.research.orchestrator import Orchestrator
 
 router = APIRouter()
 
@@ -83,7 +83,9 @@ async def step_agent(request: Request, project_id: str, body: StepAgentRequest) 
 
 @router.post("/{project_id}/pipeline")
 async def run_pipeline(
-    request: Request, project_id: str, body: RunPipelineRequest,
+    request: Request,
+    project_id: str,
+    body: RunPipelineRequest,
 ) -> list[AgentResult]:
     """Run a full or partial research pipeline."""
     orch = _get_orch(request)
@@ -101,16 +103,23 @@ async def chat(request: Request, project_id: str, body: ChatRequest):
 
     try:
         if body.stream:
+
             async def generate() -> AsyncIterator[str]:
                 async for chunk in orch.chat_stream(
-                    project_id, agent_name, body.messages, body.session_id,
+                    project_id,
+                    agent_name,
+                    body.messages,
+                    body.session_id,
                 ):
                     yield chunk
 
             return StreamingResponse(generate(), media_type="text/plain")
         else:
             response = await orch.chat(
-                project_id, agent_name, body.messages, body.session_id,
+                project_id,
+                agent_name,
+                body.messages,
+                body.session_id,
             )
             return {"content": response.content, "token_usage": response.token_usage.model_dump()}
     except ProjectError as e:

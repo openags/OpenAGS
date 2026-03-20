@@ -102,6 +102,7 @@ class ProjectManager:
 
         # Apply template (creates module directories, SOUL.md files, etc.)
         from openags.research.templates import apply_template, load_template
+
         tpl = load_template(template)
         apply_template(tpl, project_dir)
 

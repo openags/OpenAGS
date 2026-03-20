@@ -121,7 +121,9 @@ class SemanticScholarClient:
         return self._parse_paper(resp.json())
 
     async def get_references(
-        self, paper_id: str, max_results: int = 50,
+        self,
+        paper_id: str,
+        max_results: int = 50,
     ) -> list[S2Paper]:
         """Get papers referenced by a given paper."""
         async with httpx.AsyncClient(timeout=self._timeout) as client:
@@ -140,7 +142,9 @@ class SemanticScholarClient:
         ]
 
     async def get_citations(
-        self, paper_id: str, max_results: int = 50,
+        self,
+        paper_id: str,
+        max_results: int = 50,
     ) -> list[S2Paper]:
         """Get papers that cite a given paper."""
         async with httpx.AsyncClient(timeout=self._timeout) as client:
@@ -160,11 +164,7 @@ class SemanticScholarClient:
 
     @staticmethod
     def _parse_paper(raw: dict[str, Any]) -> S2Paper:
-        authors = [
-            a.get("name", "")
-            for a in raw.get("authors", [])
-            if a.get("name")
-        ]
+        authors = [a.get("name", "") for a in raw.get("authors", []) if a.get("name")]
         ext_ids = raw.get("externalIds") or {}
         return S2Paper(
             paper_id=raw.get("paperId", ""),
@@ -188,7 +188,10 @@ class SemanticScholarTool:
     """Semantic Scholar as an OpenAGS Tool (satisfies Tool protocol)."""
 
     _name = "semantic_scholar"
-    _description = "Search academic papers via Semantic Scholar, with citation counts, references, and citation graphs."
+    _description = (
+        "Search academic papers via Semantic Scholar,"
+        " with citation counts, references, and citation graphs."
+    )
 
     def __init__(self, api_key: str | None = None, timeout: int = 30) -> None:
         self._client = SemanticScholarClient(api_key=api_key, timeout=timeout)

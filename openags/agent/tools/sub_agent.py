@@ -91,14 +91,16 @@ class SubAgentTool:
         # Build child tool list (OpenAI format)
         child_tools = []
         for tool in self._child_registry.list_all():
-            child_tools.append({
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.schema(),
-                },
-            })
+            child_tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.schema(),
+                    },
+                }
+            )
 
         messages: list[dict[str, str]] = [
             {"role": "user", "content": task},
@@ -131,11 +133,13 @@ class SubAgentTool:
 
                 tool = self._child_registry.get(tool_name)
                 if tool is None:
-                    results.append({
-                        "tool_call_id": call.get("id", ""),
-                        "name": tool_name,
-                        "error": f"Unknown tool: {tool_name}",
-                    })
+                    results.append(
+                        {
+                            "tool_call_id": call.get("id", ""),
+                            "name": tool_name,
+                            "error": f"Unknown tool: {tool_name}",
+                        }
+                    )
                     continue
 
                 try:
@@ -147,19 +151,23 @@ class SubAgentTool:
                         tool_kwargs = {}
 
                     tool_result = await tool.invoke(**tool_kwargs)
-                    results.append({
-                        "tool_call_id": call.get("id", ""),
-                        "name": tool_name,
-                        "success": tool_result.success,
-                        "data": tool_result.data,
-                        "error": tool_result.error,
-                    })
+                    results.append(
+                        {
+                            "tool_call_id": call.get("id", ""),
+                            "name": tool_name,
+                            "success": tool_result.success,
+                            "data": tool_result.data,
+                            "error": tool_result.error,
+                        }
+                    )
                 except Exception as e:
-                    results.append({
-                        "tool_call_id": call.get("id", ""),
-                        "name": tool_name,
-                        "error": str(e),
-                    })
+                    results.append(
+                        {
+                            "tool_call_id": call.get("id", ""),
+                            "name": tool_name,
+                            "error": str(e),
+                        }
+                    )
 
             messages.append({"role": "user", "content": str(results)})
 
@@ -171,11 +179,11 @@ class SubAgentTool:
             "properties": {
                 "task": {
                     "type": "string",
-                    "description": "The task for the sub-agent to complete. Be specific and detailed.",
+                    "description": "The task for the sub-agent. Be specific.",
                 },
                 "max_steps": {
                     "type": "integer",
-                    "description": "Maximum number of steps the sub-agent can take (default 10, max 30)",
+                    "description": "Max steps the sub-agent can take (default 10, max 30)",
                     "default": 10,
                 },
             },

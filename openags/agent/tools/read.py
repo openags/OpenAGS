@@ -18,7 +18,10 @@ class FileReadTool:
     """Read file contents within the project workspace (satisfies Tool protocol)."""
 
     _name = "read"
-    _description = "Read file contents from the project workspace. Supports text files and PDFs. Use offset/limit for large files."
+    _description = (
+        "Read file contents from the project workspace."
+        " Supports text files and PDFs. Use offset/limit for large files."
+    )
 
     def __init__(self, workspace: Path) -> None:
         self._workspace = workspace
@@ -79,7 +82,11 @@ class FileReadTool:
             return ToolResult(success=False, error=str(e))
 
     async def _read_pdf(
-        self, file_path: Path, path_str: str, offset: object, limit: object,
+        self,
+        file_path: Path,
+        path_str: str,
+        offset: object,
+        limit: object,
     ) -> ToolResult:
         """Extract text from a PDF file."""
         try:
@@ -115,7 +122,11 @@ class FileReadTool:
             return ToolResult(
                 success=True,
                 data=content,
-                metadata={"path": path_str, "total_pages": len(pages), "pages_returned": len(selected_pages)},
+                metadata={
+                    "path": path_str,
+                    "total_pages": len(pages),
+                    "pages_returned": len(selected_pages),
+                },
             )
         except Exception as e:
             logger.error("PDF read error: %s", e)

@@ -1,4 +1,4 @@
-"""Citation graph — extract and visualize citation relationships.
+r"""Citation graph — extract and visualize citation relationships.
 
 Parses BibTeX files and LaTeX \cite{} references to build a citation network.
 """
@@ -10,15 +10,15 @@ from pathlib import Path
 
 
 def extract_citations_from_tex(tex_path: Path) -> list[str]:
-    """Extract all \cite{key} references from a LaTeX file."""
+    r"""Extract all \cite{key} references from a LaTeX file."""
     if not tex_path.exists():
         return []
     text = tex_path.read_text(encoding="utf-8")
     # Match \cite{key1, key2}, \citep{key}, \citet{key}, etc.
-    pattern = r'\\cite[pt]?\{([^}]+)\}'
+    pattern = r"\\cite[pt]?\{([^}]+)\}"
     keys: list[str] = []
     for match in re.finditer(pattern, text):
-        for key in match.group(1).split(','):
+        for key in match.group(1).split(","):
             k = key.strip()
             if k:
                 keys.append(k)
@@ -33,8 +33,8 @@ def parse_bibtex(bib_path: Path) -> dict[str, dict[str, str]]:
     entries: dict[str, dict[str, str]] = {}
 
     # Simple regex parser (handles most common cases)
-    entry_pattern = re.compile(r'@\w+\{([^,]+),\s*(.*?)\n\}', re.DOTALL)
-    field_pattern = re.compile(r'(\w+)\s*=\s*\{([^}]*)\}')
+    entry_pattern = re.compile(r"@\w+\{([^,]+),\s*(.*?)\n\}", re.DOTALL)
+    field_pattern = re.compile(r"(\w+)\s*=\s*\{([^}]*)\}")
 
     for match in entry_pattern.finditer(text):
         key = match.group(1).strip()
@@ -67,13 +67,15 @@ def build_citation_graph(project_workspace: Path) -> dict:
 
     nodes = []
     for key, fields in bib_entries.items():
-        nodes.append({
-            "id": key,
-            "title": fields.get("title", ""),
-            "author": fields.get("author", ""),
-            "year": fields.get("year", ""),
-            "cited": key in cited_keys,
-        })
+        nodes.append(
+            {
+                "id": key,
+                "title": fields.get("title", ""),
+                "author": fields.get("author", ""),
+                "year": fields.get("year", ""),
+                "cited": key in cited_keys,
+            }
+        )
 
     edges = [{"source": "main.tex", "target": k} for k in cited_keys if k in bib_entries]
     uncited = [k for k in bib_entries if k not in cited_keys]

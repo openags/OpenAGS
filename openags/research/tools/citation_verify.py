@@ -72,10 +72,12 @@ class CitationVerifier:
                 logger.warning("LLM relevance check failed: %s", e)
 
         # Build verified citation with S2 data
-        verified = citation.model_copy(update={
-            "doi": s2_paper.doi or citation.doi,
-            "year": s2_paper.year or citation.year,
-        })
+        verified = citation.model_copy(
+            update={
+                "doi": s2_paper.doi or citation.doi,
+                "year": s2_paper.year or citation.year,
+            }
+        )
 
         return VerifyResult(
             valid=True,

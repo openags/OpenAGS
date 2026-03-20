@@ -7,8 +7,8 @@ import logging
 import shlex
 from pathlib import Path
 
-from openags.research.experiment.sandbox import ExecutionResult, Sandbox
 from openags.models import RemoteServer
+from openags.research.experiment.sandbox import ExecutionResult, Sandbox
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +33,10 @@ class SSHSandbox(Sandbox):
         """Build base SSH command with common options."""
         cmd = [
             "ssh",
-            "-o", "StrictHostKeyChecking=no",
-            "-o", "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "ConnectTimeout=10",
         ]
         if self._server.key_file:
             cmd.extend(["-i", str(self._server.key_file)])
@@ -48,15 +50,12 @@ class SSHSandbox(Sandbox):
         # Build remote command with environment and working directory
         env_prefix = ""
         if env:
-            env_parts = [
-                f"export {k}={shlex.quote(v)}" for k, v in env.items() if v
-            ]
+            env_parts = [f"export {k}={shlex.quote(v)}" for k, v in env.items() if v]
             if env_parts:
                 env_prefix = " && ".join(env_parts) + " && "
 
         remote_cmd = (
-            f"mkdir -p {self._remote_dir} && cd {self._remote_dir}"
-            f" && {env_prefix}{command}"
+            f"mkdir -p {self._remote_dir} && cd {self._remote_dir} && {env_prefix}{command}"
         )
         full_cmd = [*self._ssh_base_cmd(), remote_cmd]
 

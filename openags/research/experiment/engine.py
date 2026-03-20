@@ -13,8 +13,8 @@ import logging
 import time
 
 from openags.agent.backend import Backend
-from openags.research.experiment.sandbox import SandboxFactory
 from openags.models import Experiment, ExperimentResult, SandboxMode
+from openags.research.experiment.sandbox import SandboxFactory
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class ExperimentEngine:
         self._backend = backend
         self._sandbox_factory = SandboxFactory(sandbox_mode)
         self._max_fix = max_fix_attempts
-        # Optional callback: on_output(stream: str, text: str) where stream is 'stdout'|'stderr'|'status'
+        # on_output(stream, text) — stream: 'stdout'|'stderr'|'status'
         self._on_output = on_output
 
     async def run(self, experiment: Experiment) -> ExperimentResult:
@@ -44,7 +44,9 @@ class ExperimentEngine:
         for attempt in range(1, self._max_fix + 1):
             logger.info(
                 "Experiment '%s' attempt %d/%d",
-                experiment.name, attempt, self._max_fix,
+                experiment.name,
+                attempt,
+                self._max_fix,
             )
 
             sandbox = await self._sandbox_factory.create(
@@ -53,7 +55,10 @@ class ExperimentEngine:
             )
 
             try:
-                self._emit("status", f"[Attempt {attempt}/{self._max_fix}] Running {experiment.code_path.name}...")
+                self._emit(
+                    "status",
+                    f"[Attempt {attempt}/{self._max_fix}] Running {experiment.code_path.name}...",
+                )
 
                 result = await sandbox.execute(
                     command=f"python {experiment.code_path.name}",
@@ -79,7 +84,9 @@ class ExperimentEngine:
                 self._emit("status", f"[Failed] Attempt {attempt}: {last_error[:100]}")
                 logger.warning(
                     "Experiment '%s' failed (attempt %d): %s",
-                    experiment.name, attempt, last_error[:200],
+                    experiment.name,
+                    attempt,
+                    last_error[:200],
                 )
 
             except TimeoutError:
@@ -103,7 +110,10 @@ class ExperimentEngine:
         )
 
     async def _auto_fix(
-        self, experiment: Experiment, error: str, attempt: int,
+        self,
+        experiment: Experiment,
+        error: str,
+        attempt: int,
     ) -> bool:
         """Ask LLM to fix the code. Returns True if code was modified."""
         if not experiment.code_path.exists():

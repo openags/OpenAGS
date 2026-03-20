@@ -95,9 +95,21 @@ def _safe_path(ms_dir: Path, rel_path: str) -> Path:
 
 # Directories/files to hide from the manuscript file browser
 _HIDDEN_NAMES = {
-    "agent", "sessions", "skills", ".build", ".versions", ".claude", ".openags",
-    "memory.md", "MEMORY.md", "SOUL.md", "CLAUDE.md", "AGENTS.md", "GEMINI.md",
-    "__pycache__", ".git",
+    "agent",
+    "sessions",
+    "skills",
+    ".build",
+    ".versions",
+    ".claude",
+    ".openags",
+    "memory.md",
+    "MEMORY.md",
+    "SOUL.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    "__pycache__",
+    ".git",
 }
 
 
@@ -113,19 +125,23 @@ def _build_tree(directory: Path, base: Path) -> list[FileEntry]:
         rel = str(item.relative_to(base))
         if item.is_dir():
             children = _build_tree(item, base)
-            entries.append(FileEntry(
-                name=item.name,
-                path=rel,
-                is_dir=True,
-                children=children,
-            ))
+            entries.append(
+                FileEntry(
+                    name=item.name,
+                    path=rel,
+                    is_dir=True,
+                    children=children,
+                )
+            )
         else:
-            entries.append(FileEntry(
-                name=item.name,
-                path=rel,
-                is_dir=False,
-                size=item.stat().st_size,
-            ))
+            entries.append(
+                FileEntry(
+                    name=item.name,
+                    path=rel,
+                    is_dir=False,
+                    size=item.stat().st_size,
+                )
+            )
     return entries
 
 
@@ -186,7 +202,9 @@ async def write_file(request: Request, project_id: str, body: WriteFileRequest) 
 
 @router.post("/{project_id}/create")
 async def create_entry(
-    request: Request, project_id: str, body: CreateRequest,
+    request: Request,
+    project_id: str,
+    body: CreateRequest,
 ) -> dict[str, str]:
     """Create a new file or directory in manuscript/."""
     ms_dir = _manuscript_dir(_get_pm(request), project_id)
@@ -206,7 +224,9 @@ async def create_entry(
 
 @router.post("/{project_id}/rename")
 async def rename_entry(
-    request: Request, project_id: str, body: RenameRequest,
+    request: Request,
+    project_id: str,
+    body: RenameRequest,
 ) -> dict[str, str]:
     """Rename or move a file/directory within manuscript/."""
     ms_dir = _manuscript_dir(_get_pm(request), project_id)
@@ -226,7 +246,9 @@ async def rename_entry(
 
 @router.delete("/{project_id}/file")
 async def delete_entry(
-    request: Request, project_id: str, path: str,
+    request: Request,
+    project_id: str,
+    path: str,
 ) -> dict[str, str]:
     """Delete a file or directory from manuscript/."""
     ms_dir = _manuscript_dir(_get_pm(request), project_id)
@@ -304,7 +326,8 @@ async def compile_latex(
         # Tectonic handles multiple passes automatically
         cmd = [
             "tectonic",
-            "-o", build_dir.as_posix(),
+            "-o",
+            build_dir.as_posix(),
             "--keep-logs",
             tex_path.as_posix(),
         ]
@@ -322,6 +345,7 @@ async def compile_latex(
 
     # Ensure LaTeX binaries are in PATH (macOS BasicTeX / MacTeX)
     import os
+
     env = os.environ.copy()
     tex_paths = "/Library/TeX/texbin:/opt/miniconda3/bin"
     env["PATH"] = f"{tex_paths}:{env.get('PATH', '')}"
@@ -486,12 +510,14 @@ async def list_versions(
     for snap in sorted(ver_dir.glob("v*.txt")):
         ver_num = int(snap.stem[1:])
         stat = snap.stat()
-        entries.append(VersionEntry(
-            version=ver_num,
-            timestamp=datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
-            size=stat.st_size,
-            path=path,
-        ))
+        entries.append(
+            VersionEntry(
+                version=ver_num,
+                timestamp=datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+                size=stat.st_size,
+                path=path,
+            )
+        )
     return entries
 
 
@@ -542,10 +568,14 @@ async def diff_versions(
     lines_a = path_a.read_text(encoding="utf-8").splitlines(keepends=True)
     lines_b = path_b.read_text(encoding="utf-8").splitlines(keepends=True)
 
-    diff = "".join(difflib.unified_diff(
-        lines_a, lines_b,
-        fromfile=f"v{version_a}", tofile=f"v{version_b}",
-    ))
+    diff = "".join(
+        difflib.unified_diff(
+            lines_a,
+            lines_b,
+            fromfile=f"v{version_a}",
+            tofile=f"v{version_b}",
+        )
+    )
 
     return DiffResult(
         path=path,

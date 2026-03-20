@@ -87,7 +87,9 @@ class SessionManager:
     # ── Phase 8: Session Resume ────────────────────────
 
     def get_latest(
-        self, project_id: str, agent_name: str | None = None,
+        self,
+        project_id: str,
+        agent_name: str | None = None,
     ) -> Session | None:
         """Get the most recently created session.
 

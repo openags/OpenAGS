@@ -68,9 +68,7 @@ class AgentDiscovery:
             config, _ = parse_soul(soul_path)
             # Fill defaults based on root/sub
             if not config.tools:
-                config.tools = list(
-                    _ROOT_DEFAULT_TOOLS if is_root else _SUB_DEFAULT_TOOLS
-                )
+                config.tools = list(_ROOT_DEFAULT_TOOLS if is_root else _SUB_DEFAULT_TOOLS)
             if is_root:
                 config.mode = "root"
             return config

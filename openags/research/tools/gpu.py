@@ -58,13 +58,15 @@ async def _detect_nvidia_smi() -> list[GPUInfo]:
         for line in stdout.decode().strip().splitlines():
             parts = [p.strip() for p in line.split(",")]
             if len(parts) >= 5:
-                gpus.append(GPUInfo(
-                    index=int(parts[0]),
-                    name=parts[1],
-                    memory_total_mb=int(float(parts[2])),
-                    memory_free_mb=int(float(parts[3])),
-                    utilization_percent=float(parts[4]),
-                ))
+                gpus.append(
+                    GPUInfo(
+                        index=int(parts[0]),
+                        name=parts[1],
+                        memory_total_mb=int(float(parts[2])),
+                        memory_free_mb=int(float(parts[3])),
+                        utilization_percent=float(parts[4]),
+                    )
+                )
         return gpus
 
     except (FileNotFoundError, TimeoutError):
@@ -85,18 +87,18 @@ def _detect_torch_cuda() -> list[GPUInfo]:
             mem_total = props.total_memory // (1024 * 1024)
             mem_free = mem_total  # Approximate (torch doesn't report free easily)
             try:
-                mem_free = (
-                    torch.cuda.mem_get_info(i)[0] // (1024 * 1024)
-                )
+                mem_free = torch.cuda.mem_get_info(i)[0] // (1024 * 1024)
             except Exception:
                 pass
 
-            gpus.append(GPUInfo(
-                index=i,
-                name=props.name,
-                memory_total_mb=mem_total,
-                memory_free_mb=mem_free,
-            ))
+            gpus.append(
+                GPUInfo(
+                    index=i,
+                    name=props.name,
+                    memory_total_mb=mem_total,
+                    memory_free_mb=mem_free,
+                )
+            )
         return gpus
 
     except ImportError:
@@ -112,12 +114,14 @@ def _detect_mps() -> list[GPUInfo]:
         import torch
 
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            return [GPUInfo(
-                index=0,
-                name="Apple MPS",
-                memory_total_mb=0,  # MPS shares system memory
-                memory_free_mb=0,
-            )]
+            return [
+                GPUInfo(
+                    index=0,
+                    name="Apple MPS",
+                    memory_total_mb=0,  # MPS shares system memory
+                    memory_free_mb=0,
+                )
+            ]
     except ImportError:
         pass
 

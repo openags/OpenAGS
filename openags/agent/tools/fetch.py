@@ -23,7 +23,7 @@ from openags.agent.tools.base import ToolResult
 logger = logging.getLogger(__name__)
 
 MAX_RESPONSE_BYTES = 500_000  # 500KB max download
-MAX_OUTPUT_CHARS = 50_000     # 50K chars max output
+MAX_OUTPUT_CHARS = 50_000  # 50K chars max output
 TIMEOUT_SECONDS = 15
 
 # Tags whose content should be removed entirely
@@ -91,10 +91,13 @@ class WebFetchTool:
             return ToolResult(success=False, error="URL must start with http:// or https://")
 
         try:
-            req = Request(url, headers={
-                "User-Agent": "OpenAGS/0.1 (research-agent; +https://github.com/openags/OpenAGS)",
-                "Accept": "text/html,application/json,text/plain,*/*",
-            })
+            req = Request(
+                url,
+                headers={
+                    "User-Agent": "OpenAGS/0.1 (research-agent; +https://github.com/openags/OpenAGS)",
+                    "Accept": "text/html,application/json,text/plain,*/*",
+                },
+            )
             with urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
                 content_type = resp.headers.get("Content-Type", "")
                 raw = resp.read(MAX_RESPONSE_BYTES)

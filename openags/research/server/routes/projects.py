@@ -15,8 +15,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from openags.agent.errors import ProjectError
-from openags.research.project import ProjectManager
 from openags.models import Project
+from openags.research.project import ProjectManager
 from openags.research.server.routes.auth import _extract_user
 
 router = APIRouter()
@@ -76,8 +76,11 @@ async def create_project(request: Request, body: CreateProjectRequest) -> Projec
 
     try:
         return pm.create(
-            project_id, body.name, body.description,
-            owner_id=owner_id, workspace_dir=workspace_dir,
+            project_id,
+            body.name,
+            body.description,
+            owner_id=owner_id,
+            workspace_dir=workspace_dir,
         )
     except ProjectError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -146,7 +149,8 @@ def _config_path(project: Project) -> Path:
 
 @router.get("/{project_id}/config")
 async def get_project_config(
-    request: Request, project_id: str,
+    request: Request,
+    project_id: str,
 ) -> dict[str, object]:
     """Get per-project configuration."""
     pm = _get_pm(request)
@@ -171,7 +175,9 @@ async def get_project_config(
 
 @router.put("/{project_id}/config")
 async def update_project_config(
-    request: Request, project_id: str, body: ProjectConfigUpdate,
+    request: Request,
+    project_id: str,
+    body: ProjectConfigUpdate,
 ) -> dict[str, object]:
     """Update per-project configuration."""
     pm = _get_pm(request)
@@ -310,8 +316,17 @@ async def list_templates(request: Request) -> list[dict]:
         for d in sorted(custom_dir.iterdir()):
             if d.is_dir() and (d / ".openags" / "meta.yaml").exists():
                 try:
-                    meta = yaml.safe_load((d / ".openags" / "meta.yaml").read_text(encoding="utf-8")) or {}
-                    custom.append({"name": d.name, "description": meta.get("description", ""), "builtin": False})
+                    meta = (
+                        yaml.safe_load((d / ".openags" / "meta.yaml").read_text(encoding="utf-8"))
+                        or {}
+                    )
+                    custom.append(
+                        {
+                            "name": d.name,
+                            "description": meta.get("description", ""),
+                            "builtin": False,
+                        }
+                    )
                 except Exception:
                     custom.append({"name": d.name, "description": "", "builtin": False})
 
@@ -333,10 +348,21 @@ async def save_as_template(request: Request, project_id: str, body: SaveTemplate
 
     template_dir = pm._workspace / "templates" / body.template_name
     if template_dir.exists():
-        raise HTTPException(status_code=409, detail=f"Template '{body.template_name}' already exists")
+        raise HTTPException(
+            status_code=409, detail=f"Template '{body.template_name}' already exists"
+        )
 
     # Copy project structure (SOUL.md, skills, config — skip data/sessions/uploads)
-    skip_dirs = {"sessions", "uploads", "data", "runs", ".build", "__pycache__", ".git", "node_modules"}
+    skip_dirs = {
+        "sessions",
+        "uploads",
+        "data",
+        "runs",
+        ".build",
+        "__pycache__",
+        ".git",
+        "node_modules",
+    }
     skip_exts = {".pdf", ".csv", ".jsonl", ".log", ".png", ".jpg"}
 
     template_dir.mkdir(parents=True, exist_ok=True)

@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 import re
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -100,7 +100,7 @@ def write_status_from_result(
 
     Used by the builtin backend path — guarantees well-formed output.
     """
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     duration = (now - started_at).total_seconds()
 
     status = StatusModel(
@@ -129,7 +129,7 @@ def write_failed_status(
     error_message: str,
 ) -> None:
     """Write a failed STATUS.md — used by orchestrator for crashes/timeouts."""
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     status = StatusModel(
         directive_id=directive_id,
         agent=agent_name,
@@ -156,7 +156,7 @@ def parse_status(agent_dir: Path) -> StatusModel | None:
         try:
             fm = yaml.safe_load(fm_match.group(1))
             if isinstance(fm, dict) and "status" in fm:
-                body = raw[fm_match.end():]
+                body = raw[fm_match.end() :]
                 return _build_status_from_parsed(fm, body)
         except yaml.YAMLError:
             pass

@@ -12,9 +12,9 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from openags.agent.errors import ProjectError
-from openags.research.orchestrator import Orchestrator
 from openags.agent.session import SessionManager
 from openags.models import RunMode, Session
+from openags.research.orchestrator import Orchestrator
 
 router = APIRouter()
 
@@ -58,7 +58,10 @@ def _get_session_mgr(request: Request, project_id: str, section: str) -> Session
 
 @router.post("/{project_id}/{section}", response_model=Session)
 async def create_session(
-    request: Request, project_id: str, section: str, body: CreateSessionRequest,
+    request: Request,
+    project_id: str,
+    section: str,
+    body: CreateSessionRequest,
 ) -> Session:
     """Create a new chat session in a project section."""
     mgr = _get_session_mgr(request, project_id, section)
@@ -87,7 +90,10 @@ async def list_sessions(request: Request, project_id: str, section: str) -> list
 
 @router.get("/{project_id}/{section}/{session_id}", response_model=Session)
 async def get_session(
-    request: Request, project_id: str, section: str, session_id: str,
+    request: Request,
+    project_id: str,
+    section: str,
+    session_id: str,
 ) -> Session:
     """Get a session with its full message history."""
     mgr = _get_session_mgr(request, project_id, section)
@@ -99,7 +105,10 @@ async def get_session(
 
 @router.delete("/{project_id}/{section}/{session_id}")
 async def delete_session(
-    request: Request, project_id: str, section: str, session_id: str,
+    request: Request,
+    project_id: str,
+    section: str,
+    session_id: str,
 ) -> dict[str, str]:
     """Delete a session."""
     mgr = _get_session_mgr(request, project_id, section)

@@ -4,19 +4,20 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncIterator
+from datetime import UTC
 from pathlib import Path
 
-from openags.agent.loop import Agent
-from openags.agent.discovery import AgentDiscovery
-from openags.research.backend.router import RuntimeRouter
 from openags.agent.auto_memory import AutoMemory
+from openags.agent.discovery import AgentDiscovery
 from openags.agent.errors import AgentError
 from openags.agent.hooks import HookRunner, parse_hooks
+from openags.agent.loop import Agent
 from openags.agent.memory import MemorySystem
 from openags.agent.message_bus import MessageBus
-from openags.research.project import ProjectManager
 from openags.agent.session import SessionManager
-from openags.research.logging.tracker import TokenTracker
+from openags.agent.skills.engine import SkillEngine
+from openags.agent.tools.base import ToolRegistry
+from openags.agent.tools.mcp import MCPManager
 from openags.models import (
     AgentResult,
     BackendResponse,
@@ -31,10 +32,10 @@ from openags.models import (
     SystemConfig,
     TokenUsage,
 )
-from openags.agent.skills.engine import SkillEngine
+from openags.research.backend.router import RuntimeRouter
+from openags.research.logging.tracker import TokenTracker
+from openags.research.project import ProjectManager
 from openags.research.registry import create_research_registry
-from openags.agent.tools.base import ToolRegistry
-from openags.agent.tools.mcp import MCPManager
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ class Orchestrator:
 
         # Load plugin skills
         from openags.agent.plugins import PluginManager
+
         self._plugin_mgr = PluginManager(config.workspace_dir / "plugins")
         self._plugin_mgr.discover()
         skill_dirs.extend(self._plugin_mgr.get_skill_dirs())
@@ -107,7 +109,8 @@ class Orchestrator:
                 self._mcp_tools.extend(tools)
                 logger.info(
                     "MCP server '%s': %d tools registered",
-                    server_config.name, len(tools),
+                    server_config.name,
+                    len(tools),
                 )
             except Exception as e:
                 logger.error("Failed to connect MCP server '%s': %s", server_config.name, e)
@@ -122,7 +125,7 @@ class Orchestrator:
     ) -> None:
         """Write a checkpoint after an agent completes a task."""
         import json as _json
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         checkpoint_dir = project.workspace / ".openags" / "checkpoints"
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -132,7 +135,7 @@ class Orchestrator:
             "task": task[:200],
             "success": result.success,
             "duration_seconds": result.duration_seconds,
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "output_preview": (result.output or "")[:500],
             "error": result.error,
             "token_usage": {
@@ -161,7 +164,9 @@ class Orchestrator:
             discovered = AgentDiscovery.discover(project.workspace)
             config = discovered.get(agent_name)
             if config is None:
-                raise AgentError(f"No agent discovered with name '{agent_name}' in {project.workspace}")
+                raise AgentError(
+                    f"No agent discovered with name '{agent_name}' in {project.workspace}"
+                )
 
             # Module directory: root (coordinator) uses project workspace,
             # subagents get their own subdirectory
@@ -198,11 +203,13 @@ class Orchestrator:
                         hooks_raw[event_key] = []
                     hook_list = hooks_raw[event_key]
                     if isinstance(hook_list, list):
-                        hook_list.append({
-                            "matcher": hook.matcher,
-                            "command": hook.command,
-                            "timeout": hook.timeout,
-                        })
+                        hook_list.append(
+                            {
+                                "matcher": hook.matcher,
+                                "command": hook.command,
+                                "timeout": hook.timeout,
+                            }
+                        )
                 hook_config = parse_hooks(hooks_raw)
                 agent._hook_runner = HookRunner(hook_config, working_dir=module_dir)
 
@@ -214,12 +221,15 @@ class Orchestrator:
 
     def _make_event_callback(self, project_id: str):
         """Create an async event callback that broadcasts via WebSocket."""
+
         async def on_event(event_type: str, data: dict) -> None:
             try:
                 from openags.research.server.routes.ws import manager
+
                 await manager.broadcast(project_id, event_type, data)
             except Exception:
                 pass  # WebSocket may not be available (CLI mode)
+
         return on_event
 
     def _get_tool_registry(self, project: Project, agent_name: str = "ags") -> ToolRegistry:
@@ -231,9 +241,9 @@ class Orchestrator:
         cache_key = f"{project.id}:{agent_name}"
         if cache_key not in self._tool_registries:
             from openags.agent.tools.ask_user import AskUserTool
+            from openags.agent.tools.sub_agent import SubAgentTool
             from openags.research.tools.check_progress import CheckProgressTool
             from openags.research.tools.dispatch_agent import DispatchAgentTool
-            from openags.agent.tools.sub_agent import SubAgentTool
 
             # AGS/coordinator (root) gets project root, sub-agents get their own directory
             if agent_name in ("ags", "coordinator", "root"):
@@ -260,8 +270,13 @@ class Orchestrator:
                 registry.register(tool)
 
             self._tool_registries[cache_key] = registry
-            logger.info("Created tool registry for %s:%s (%d tools, workspace=%s)",
-                        project.id, agent_name, len(registry.list_names()), workspace)
+            logger.info(
+                "Created tool registry for %s:%s (%d tools, workspace=%s)",
+                project.id,
+                agent_name,
+                len(registry.list_names()),
+                workspace,
+            )
         return self._tool_registries[cache_key]
 
     def _get_session_mgr(self, agent_name: str, project: Project) -> SessionManager:
@@ -313,11 +328,16 @@ class Orchestrator:
                     f"${summary['cost_usd']:.2f} > ${self._config.token_budget_usd:.2f}"
                 )
 
-        logger.info("Running agent[%s] on project '%s' (runtime=%s)",
-                     agent_name, project_id, self._runtime.runtime_type)
+        logger.info(
+            "Running agent[%s] on project '%s' (runtime=%s)",
+            agent_name,
+            project_id,
+            self._runtime.runtime_type,
+        )
 
-        from datetime import datetime as _dt, timezone as _tz
-        started_at = _dt.now(tz=_tz.utc)
+        from datetime import datetime as _dt
+
+        started_at = _dt.now(tz=UTC)
 
         backend_type = self._runtime.runtime_type
 
@@ -332,7 +352,12 @@ class Orchestrator:
         # Write STATUS.md (workflow protocol)
         from openags.agent.directive import parse_directive
         from openags.agent.status import write_status_from_result
-        agent_dir = project.workspace if agent_name in ("ags", "coordinator", "root") else project.workspace / agent_name
+
+        agent_dir = (
+            project.workspace
+            if agent_name in ("ags", "coordinator", "root")
+            else project.workspace / agent_name
+        )
         directive = parse_directive(agent_dir)
         directive_id = directive.directive_id if directive else "none"
         write_status_from_result(agent_dir, directive_id, agent_name, result, started_at)
@@ -341,9 +366,12 @@ class Orchestrator:
         self._write_checkpoint(project, agent_name, task, result)
 
         # Auto-memory: learn from successful execution
-        if hasattr(agent, '_auto_memory') and agent._auto_memory:
+        if hasattr(agent, "_auto_memory") and agent._auto_memory:
             await agent._auto_memory.maybe_learn(
-                task, result.output, result.success, self._runtime.get_llm_backend(),
+                task,
+                result.output,
+                result.success,
+                self._runtime.get_llm_backend(),
             )
 
         # Track token usage
@@ -401,22 +429,21 @@ class Orchestrator:
         """
         import asyncio as _asyncio
 
-        tasks = [
-            self.run_agent(project_id, a["agent"], a["task"])
-            for a in agents
-        ]
+        tasks = [self.run_agent(project_id, a["agent"], a["task"]) for a in agents]
         results = await _asyncio.gather(*tasks, return_exceptions=True)
 
         final: list[AgentResult] = []
         for i, r in enumerate(results):
             if isinstance(r, Exception):
-                final.append(AgentResult(
-                    success=False,
-                    output="",
-                    error=str(r),
-                    token_usage=TokenUsage(model=""),
-                    duration_seconds=0,
-                ))
+                final.append(
+                    AgentResult(
+                        success=False,
+                        output="",
+                        error=str(r),
+                        token_usage=TokenUsage(model=""),
+                        duration_seconds=0,
+                    )
+                )
                 logger.error("Parallel agent[%s] failed: %s", agents[i]["agent"], r)
             else:
                 final.append(r)
@@ -462,9 +489,9 @@ class Orchestrator:
         else:
             coordinator_task = (
                 f"{task}\n\n"
-                f"Manage the full research workflow. Use check_progress to assess the current state, "
-                f"then use dispatch_agent to run the appropriate agents in the right order. "
-                f"After each agent completes, evaluate the results and decide next steps."
+                "Manage the full research workflow. Use check_progress to assess "
+                "the current state, then use dispatch_agent to run the appropriate "
+                "agents. After each agent completes, evaluate and decide next steps."
             )
 
         logger.info("Starting Coordinator-driven pipeline for '%s'", project_id)
@@ -496,9 +523,13 @@ class Orchestrator:
             enriched: list[dict[str, str]] = []
             if context.strip():
                 enriched.append({"role": "user", "content": f"[Project context]\n{context}"})
-                enriched.append({"role": "assistant", "content": "Understood. I have the project context."})
+                enriched.append(
+                    {"role": "assistant", "content": "Understood. I have the project context."}
+                )
             enriched.extend(messages)
-            response = await self._runtime.get_llm_backend().execute_chat(enriched, system=system_prompt)
+            response = await self._runtime.get_llm_backend().execute_chat(
+                enriched, system=system_prompt
+            )
             self._tracker.record(project_id, agent_name, response.token_usage)
             return response
 
@@ -513,15 +544,21 @@ class Orchestrator:
                 )
                 task = f"[Prior conversation]\n{prior_context}\n\n[Current request]\n{task}"
 
-        from datetime import datetime as _dt, timezone as _tz
-        chat_started = _dt.now(tz=_tz.utc)
+        from datetime import datetime as _dt
+
+        chat_started = _dt.now(tz=UTC)
 
         result = await agent.loop(task)
 
         # Write STATUS.md (workflow protocol)
         from openags.agent.directive import parse_directive
         from openags.agent.status import write_status_from_result
-        agent_dir = project.workspace if agent_name in ("ags", "coordinator", "root") else project.workspace / agent_name
+
+        agent_dir = (
+            project.workspace
+            if agent_name in ("ags", "coordinator", "root")
+            else project.workspace / agent_name
+        )
         directive = parse_directive(agent_dir)
         directive_id = directive.directive_id if directive else "none"
         write_status_from_result(agent_dir, directive_id, agent_name, result, chat_started)
@@ -613,8 +650,20 @@ class Orchestrator:
 
         # Check if user's message needs file operations
         user_msg = (task or messages[-1].get("content", "")).lower()
-        _FILE_KEYWORDS = {"读取", "查阅", "文件", "pdf", "uploads/", "[attached", "文档", "查看文件", "打开", "read", "file"}
-        needs_tools = any(kw in user_msg for kw in _FILE_KEYWORDS)
+        _file_keywords = {
+            "读取",
+            "查阅",
+            "文件",
+            "pdf",
+            "uploads/",
+            "[attached",
+            "文档",
+            "查看文件",
+            "打开",
+            "read",
+            "file",
+        }
+        needs_tools = any(kw in user_msg for kw in _file_keywords)
 
         if not needs_tools:
             # Simple conversation → direct LLM streaming, no tools
@@ -638,7 +687,9 @@ class Orchestrator:
                 if messages:
                     last_user = messages[-1]
                     if last_user.get("role") == "user":
-                        session_mgr.add_message(session_id, Message(role="user", content=last_user["content"]))
+                        session_mgr.add_message(
+                            session_id, Message(role="user", content=last_user["content"])
+                        )
                 session_mgr.add_message(session_id, Message(role="assistant", content=last_content))
             agent._messages.clear()
             return
@@ -651,7 +702,7 @@ class Orchestrator:
         if first_result.tool_calls:
             # Agent needs tools → step-by-step mode (tool status lines + final text)
             last_content = first_result.content or ""
-            has_tool_activity = True
+            _ = True  # has_tool_activity
             _repeat_count = 0
             _prev_content = first_result.content
 
@@ -665,7 +716,16 @@ class Orchestrator:
                 if isinstance(args_raw, str) and args_raw:
                     try:
                         args = _json.loads(args_raw)
-                        for k in ("query", "path", "command", "role", "task", "module", "pattern", "question"):
+                        for k in (
+                            "query",
+                            "path",
+                            "command",
+                            "role",
+                            "task",
+                            "module",
+                            "pattern",
+                            "question",
+                        ):
                             if k in args:
                                 arg_hint = f": {str(args[k])[:60]}"
                                 break
@@ -682,7 +742,9 @@ class Orchestrator:
             # Continue stepping until done (cap at 10 for chat to avoid endless loops)
             chat_max_steps = min(agent.max_steps - 1, 10)
             for _step in range(chat_max_steps):
-                if first_result.error or agent._is_done(first_result.content, first_result.tool_calls):
+                if first_result.error or agent._is_done(
+                    first_result.content, first_result.tool_calls
+                ):
                     break
 
                 # Tell frontend we're still working
@@ -709,7 +771,16 @@ class Orchestrator:
                         if isinstance(args_raw, str) and args_raw:
                             try:
                                 args = _json.loads(args_raw)
-                                for k in ("query", "path", "command", "role", "task", "module", "pattern", "question"):
+                                for k in (
+                                    "query",
+                                    "path",
+                                    "command",
+                                    "role",
+                                    "task",
+                                    "module",
+                                    "pattern",
+                                    "question",
+                                ):
                                     if k in args:
                                         arg_hint = f": {str(args[k])[:60]}"
                                         break
@@ -765,7 +836,9 @@ class Orchestrator:
             if messages:
                 last_user = messages[-1]
                 if last_user.get("role") == "user":
-                    session_mgr.add_message(session_id, Message(role="user", content=last_user["content"]))
+                    session_mgr.add_message(
+                        session_id, Message(role="user", content=last_user["content"])
+                    )
             session_mgr.add_message(session_id, Message(role="assistant", content=last_content))
 
         agent._messages.clear()

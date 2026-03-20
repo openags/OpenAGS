@@ -64,8 +64,8 @@ def _build_standalone_agent(
     """
     from openags.agent.loop import Agent
     from openags.agent.memory import MemorySystem
-    from openags.models import AgentConfig
     from openags.agent.tools.base import create_engine_registry
+    from openags.models import AgentConfig
 
     # Try to discover agent config from SOUL.md
     soul_name, soul_body = _load_soul_config(workspace)
@@ -78,13 +78,10 @@ def _build_standalone_agent(
         from openags.research.backend.router import RuntimeRouter
 
         backend = RuntimeRouter(config).get_llm_backend()
-        backend_model = config.default_backend.model
+        _ = config.default_backend.model  # validate model exists
     except Exception:
         # Fallback: try to create a basic backend
         raise typer.Exit(1)
-
-    if model:
-        backend_model = model
 
     # Build agent config
     if soul_name:
@@ -123,7 +120,9 @@ def run_task(
 ) -> None:
     """Run a single task and print the result."""
     if verbose:
-        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+        logging.basicConfig(
+            level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        )
 
     ws = _resolve_workspace(workspace)
     agent, _backend = _build_standalone_agent(ws, model=model)
@@ -153,15 +152,16 @@ def run_repl(
 ) -> None:
     """Interactive REPL mode."""
     if verbose:
-        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+        logging.basicConfig(
+            level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        )
 
     ws = _resolve_workspace(workspace)
     agent, backend = _build_standalone_agent(ws, model=model)
 
     console.print(
         Panel(
-            f"[bold]Workspace:[/] [cyan]{ws}[/]  |  "
-            f"[bold]Agent:[/] [yellow]{agent.name}[/]",  # type: ignore[attr-defined]
+            f"[bold]Workspace:[/] [cyan]{ws}[/]  |  [bold]Agent:[/] [yellow]{agent.name}[/]",  # type: ignore[attr-defined]
             title="[bold]OpenAGS Agent[/]",
             subtitle="[dim]Type /exit to quit[/]",
             border_style="blue",

@@ -42,7 +42,9 @@ class MessageBus:
         if message.hop_count >= message.max_hops:
             logger.warning(
                 "Message dropped: hop_count=%d reached max_hops=%d on topic '%s'",
-                message.hop_count, message.max_hops, message.topic,
+                message.hop_count,
+                message.max_hops,
+                message.topic,
             )
             return
 
@@ -69,10 +71,12 @@ class MessageBus:
 
     async def forward(self, original: BusMessage, new_topic: str) -> None:
         """Forward a message to a new topic, auto-incrementing hop_count."""
-        forwarded = original.model_copy(update={
-            "topic": new_topic,
-            "hop_count": original.hop_count + 1,
-        })
+        forwarded = original.model_copy(
+            update={
+                "topic": new_topic,
+                "hop_count": original.hop_count + 1,
+            }
+        )
         await self.publish(forwarded)
 
     @staticmethod
@@ -112,4 +116,3 @@ class MessageBus:
         if clear:
             self._mailbox[agent_name] = []
         return messages
-

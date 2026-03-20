@@ -62,7 +62,10 @@ class FileEditTool:
             if count > 1:
                 return ToolResult(
                     success=False,
-                    error=f"old_text found {count} times in {path_str}. Must be unique. Provide more surrounding context.",
+                    error=(
+                        f"old_text found {count} times in {path_str}. "
+                        "Must be unique. Provide more surrounding context."
+                    ),
                 )
 
             new_content = content.replace(old_text, new_text, 1)

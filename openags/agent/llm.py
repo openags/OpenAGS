@@ -77,14 +77,16 @@ class LLMBackend:
                 tool_calls_raw: list[dict[str, object]] = []
                 if hasattr(message, "tool_calls") and message.tool_calls:
                     for tc in message.tool_calls:
-                        tool_calls_raw.append({
-                            "id": tc.id,
-                            "type": tc.type,
-                            "function": {
-                                "name": tc.function.name,
-                                "arguments": tc.function.arguments,
-                            },
-                        })
+                        tool_calls_raw.append(
+                            {
+                                "id": tc.id,
+                                "type": tc.type,
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                        )
 
                 return BackendResponse(
                     content=content,
@@ -148,6 +150,7 @@ class LLMBackend:
             if not self._model:
                 return False
             import litellm
+
             litellm.get_model_info(self._model)
             return True
         except Exception:
