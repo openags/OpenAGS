@@ -600,3 +600,13 @@ async def parse_pdf(
         figure_count=len(paper.figures),
         summary=summary,
     )
+
+
+@router.get("/{project_id}/citations")
+async def get_citation_graph(request: Request, project_id: str) -> dict:
+    """Get the citation graph for a project (nodes + edges)."""
+    from openags.research.tools.citation_graph import build_citation_graph
+
+    pm = _get_pm(request)
+    project = pm.get(project_id)
+    return build_citation_graph(project.workspace)

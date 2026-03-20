@@ -142,11 +142,17 @@ class LLMBackend:
                 yield delta.content
 
     async def health_check(self) -> bool:
+        """Quick config validity check — does NOT call the LLM API."""
         try:
-            await self.execute("Reply with 'ok'.", timeout=15)
+            # Just verify the model string is non-empty and litellm can resolve it
+            if not self._model:
+                return False
+            import litellm
+            litellm.get_model_info(self._model)
             return True
         except Exception:
-            return False
+            # Model not in litellm registry is fine — custom/proxy models won't be
+            return bool(self._model)
 
     @staticmethod
     def _estimate_cost(usage: object) -> float:

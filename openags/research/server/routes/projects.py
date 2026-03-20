@@ -296,7 +296,6 @@ async def clone_project(request: Request, project_id: str, body: CloneRequest) -
 @router.get("/templates/list")
 async def list_templates(request: Request) -> list[dict]:
     """List available project templates (built-in + custom)."""
-    from openags.research.templates import _research_template, _minimal_template
 
     built_in = [
         {"name": "research", "description": "Full research workflow (7 modules)", "builtin": True},

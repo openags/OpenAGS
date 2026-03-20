@@ -63,7 +63,6 @@ def _build_standalone_agent(
     Returns (agent, backend).
     """
     from openags.agent.loop import Agent
-    from openags.agent.discovery import AgentDiscovery
     from openags.agent.memory import MemorySystem
     from openags.models import AgentConfig
     from openags.agent.tools.base import create_engine_registry
