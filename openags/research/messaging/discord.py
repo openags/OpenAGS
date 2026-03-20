@@ -11,9 +11,9 @@ from openags.models import DiscordConfig
 logger = logging.getLogger(__name__)
 
 _LEVEL_COLOR = {
-    "info": 0x3498DB,     # blue
+    "info": 0x3498DB,  # blue
     "warning": 0xF39C12,  # orange
-    "error": 0xE74C3C,    # red
+    "error": 0xE74C3C,  # red
     "success": 0x2ECC71,  # green
 }
 

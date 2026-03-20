@@ -86,7 +86,7 @@ def set_config_value(key: str, value: str, path: Path | None = None) -> SystemCo
         set_config_value("log_level", "DEBUG")
         set_config_value("default_backend.api_key", "sk-xxx")
     """
-    config = load_config(path)
+    load_config(path)
     config_path = path or _default_config_path()
 
     # Load raw YAML to preserve structure

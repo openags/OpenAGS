@@ -173,11 +173,13 @@ class PDFParser:
             if len(content) > 10000:
                 content = content[:10000] + "..."
 
-            sections.append(PaperSection(
-                heading=heading,
-                content=content,
-                level=level,
-            ))
+            sections.append(
+                PaperSection(
+                    heading=heading,
+                    content=content,
+                    level=level,
+                )
+            )
 
         return sections
 
@@ -207,13 +209,15 @@ class PDFParser:
                     img_path = fig_dir / f"{stem}_p{page_num + 1}_fig{img_idx + 1}.png"
                     pix.save(str(img_path))
 
-                    figures.append(PaperFigure(
-                        page=page_num + 1,
-                        index=img_idx + 1,
-                        width=pix.width,
-                        height=pix.height,
-                        image_path=str(img_path),
-                    ))
+                    figures.append(
+                        PaperFigure(
+                            page=page_num + 1,
+                            index=img_idx + 1,
+                            width=pix.width,
+                            height=pix.height,
+                            image_path=str(img_path),
+                        )
+                    )
                 except Exception as e:
                     logger.debug("Failed to extract image p%d/%d: %s", page_num, img_idx, e)
 

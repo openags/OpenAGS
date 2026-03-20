@@ -7,8 +7,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from openags.models import SkillMeta
 from openags.agent.skills.engine import SkillEngine
+from openags.models import SkillMeta
 
 router = APIRouter()
 

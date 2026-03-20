@@ -94,8 +94,16 @@ class CheckProgressTool:
                         f.is_file()
                         and "agent" not in str(f)
                         and "sessions" not in str(f)
-                        and f.name not in ("memory.md", "SOUL.md", "DIRECTIVE.md", "STATUS.md",
-                                           "CLAUDE.md", "AGENTS.md", "GEMINI.md")
+                        and f.name
+                        not in (
+                            "memory.md",
+                            "SOUL.md",
+                            "DIRECTIVE.md",
+                            "STATUS.md",
+                            "CLAUDE.md",
+                            "AGENTS.md",
+                            "GEMINI.md",
+                        )
                     ):
                         file_count += 1
 
@@ -203,7 +211,7 @@ class CheckProgressTool:
             "properties": {
                 "module": {
                     "type": "string",
-                    "description": "Module to check (e.g. 'literature', 'proposal'). Omit to get an overview of all modules.",
+                    "description": "Module to check (e.g. 'literature'). Omit for overview.",
                 },
             },
             "required": [],

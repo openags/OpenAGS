@@ -81,10 +81,7 @@ class DispatchAgentTool:
         if agent_lower not in discovered:
             return ToolResult(
                 success=False,
-                error=(
-                    f"Unknown agent '{agent_name}'. "
-                    f"Available: {', '.join(available_names)}"
-                ),
+                error=(f"Unknown agent '{agent_name}'. Available: {', '.join(available_names)}"),
             )
 
         logger.info("AGS dispatching %s: %s", agent_name, task[:100])
@@ -93,11 +90,15 @@ class DispatchAgentTool:
         try:
             from openags.research.server.routes.ws import manager
 
-            await manager.broadcast(self._project_id, "agent.dispatch", {
-                "parent": "ags",
-                "child": agent_name,
-                "task": task[:200],
-            })
+            await manager.broadcast(
+                self._project_id,
+                "agent.dispatch",
+                {
+                    "parent": "ags",
+                    "child": agent_name,
+                    "task": task[:200],
+                },
+            )
         except Exception:
             pass
 
@@ -144,22 +145,20 @@ class DispatchAgentTool:
             if not agent_name:
                 return ToolResult(success=False, error="Each batch item requires 'agent'.")
             if not item.get("task"):
-                return ToolResult(success=False, error=f"Batch item for '{agent_name}' missing 'task'.")
+                return ToolResult(
+                    success=False, error=f"Batch item for '{agent_name}' missing 'task'."
+                )
             if agent_name.lower() not in discovered:
                 return ToolResult(
                     success=False,
                     error=(
-                        f"Unknown agent '{agent_name}'. "
-                        f"Available: {', '.join(available_names)}"
+                        f"Unknown agent '{agent_name}'. Available: {', '.join(available_names)}"
                     ),
                 )
 
         logger.info("Coordinator batch-dispatching %d agents", len(agents_batch))
 
-        tasks = [
-            self._single_dispatch(item["agent"], item["task"])
-            for item in agents_batch
-        ]
+        tasks = [self._single_dispatch(item["agent"], item["task"]) for item in agents_batch]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         summaries: list[str] = []
@@ -189,11 +188,11 @@ class DispatchAgentTool:
             "properties": {
                 "agent": {
                     "type": "string",
-                    "description": "The agent name to dispatch the task to (e.g. 'literature', 'proposer').",
+                    "description": "Agent name to dispatch to (e.g. 'literature').",
                 },
                 "task": {
                     "type": "string",
-                    "description": "Specific task description for the agent. Be detailed and actionable.",
+                    "description": "Task description for the agent. Be detailed.",
                 },
                 "agents": {
                     "type": "array",

@@ -8,7 +8,6 @@ from datetime import datetime
 from io import TextIOWrapper
 from pathlib import Path
 
-
 logger = logging.getLogger(__name__)
 
 

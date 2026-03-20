@@ -110,14 +110,16 @@ class ToolRegistry:
         """Export all tools as OpenAI function-calling format (for LLM)."""
         result = []
         for tool in self._tools.values():
-            result.append({
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.schema(),
-                },
-            })
+            result.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.schema(),
+                    },
+                }
+            )
         return result
 
 

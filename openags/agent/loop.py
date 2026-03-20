@@ -11,6 +11,8 @@ from typing import Any
 
 from openags.agent.llm import LLMBackend
 from openags.agent.memory import MemorySystem
+from openags.agent.skills.engine import SkillEngine
+from openags.agent.tools.base import ToolRegistry
 from openags.models import (
     AgentConfig,
     AgentResult,
@@ -19,8 +21,6 @@ from openags.models import (
     StepResult,
     TokenUsage,
 )
-from openags.agent.skills.engine import SkillEngine
-from openags.agent.tools.base import ToolRegistry
 
 # Event callback type: async fn(event_type: str, data: dict) -> None
 AgentEventCallback = Callable[[str, dict[str, Any]], Coroutine[Any, Any, None]]
@@ -65,7 +65,9 @@ class Agent:
         elif backend_config is not None:
             self._backend = LLMBackend(backend_config)
         else:
-            raise ValueError("Agent requires either 'backend' (LLMBackend) or 'backend_config' (BackendConfig)")
+            raise ValueError(
+                "Agent requires either 'backend' (LLMBackend) or 'backend_config' (BackendConfig)"
+            )
         self._tool_registry = tool_registry
         self._skill_engine = skill_engine
         self._messages: list[dict[str, str]] = []
@@ -194,7 +196,8 @@ class Agent:
                     if _repeat_count >= 2:
                         logger.warning(
                             "Agent[%s] stuck: repeated output %d times, forcing stop",
-                            self.config.name, _repeat_count,
+                            self.config.name,
+                            _repeat_count,
                         )
                         break
                 else:
@@ -223,13 +226,21 @@ class Agent:
                 # Check done with min_steps guard and tool_required logic
                 if result.done and (_i + 1) >= min_steps:
                     # TOOL_REQUIRED: must have called at least one tool
-                    if self.config.done_strategy == DoneStrategy.TOOL_REQUIRED and not _has_tool_calls:
-                        logger.info("Agent[%s] step %d: done but no tool calls yet (tool_required), continuing",
-                                    self.config.name, _i + 1)
-                        self._messages.append({
-                            "role": "user",
-                            "content": "你还没有使用任何工具。请立即使用工具来完成任务，不要只输出文字。",
-                        })
+                    if (
+                        self.config.done_strategy == DoneStrategy.TOOL_REQUIRED
+                        and not _has_tool_calls
+                    ):
+                        logger.info(
+                            "Agent[%s] step %d: done, no tool calls (tool_required)",
+                            self.config.name,
+                            _i + 1,
+                        )
+                        self._messages.append(
+                            {
+                                "role": "user",
+                                "content": "你还没有使用任何工具。请使用工具完成任务。",
+                            }
+                        )
                         continue
                     break
 
@@ -257,11 +268,14 @@ class Agent:
                 details=f"Task: {task}\nOutput: {output[:500]}",
             )
 
-            await self._emit("agent.done", {
-                "success": True,
-                "duration": round(duration, 1),
-                "steps": _i + 1,
-            })
+            await self._emit(
+                "agent.done",
+                {
+                    "success": True,
+                    "duration": round(duration, 1),
+                    "steps": _i + 1,
+                },
+            )
 
             self._messages.clear()
             return AgentResult(
@@ -326,7 +340,11 @@ class Agent:
             if msg.get("role") == "user" and "[{" in str(msg.get("content", ""))[:10]:
                 result_indices.append(i)
 
-        to_clear = result_indices[:-self._KEEP_RECENT_RESULTS] if len(result_indices) > self._KEEP_RECENT_RESULTS else []
+        to_clear = (
+            result_indices[: -self._KEEP_RECENT_RESULTS]
+            if len(result_indices) > self._KEEP_RECENT_RESULTS
+            else []
+        )
         for idx in to_clear:
             content = str(self._messages[idx].get("content", ""))
             if len(content) > 100:
@@ -376,9 +394,7 @@ class Agent:
                 return self._render_soul(module_soul.read_text(encoding="utf-8"))
 
         # 2. Project-level (legacy path)
-        project_soul = (
-            self._memory.project_dir / ".openags" / "souls" / f"{agent_name}.md"
-        )
+        project_soul = self._memory.project_dir / ".openags" / "souls" / f"{agent_name}.md"
         if project_soul.exists():
             return self._render_soul(project_soul.read_text(encoding="utf-8"))
 
@@ -393,8 +409,7 @@ class Agent:
     def _render_soul(self, template: str) -> str:
         """Simple variable substitution -- no Jinja2 dependency."""
         return (
-            template
-            .replace("{{role}}", self.config.name)
+            template.replace("{{role}}", self.config.name)
             .replace("{{name}}", self.config.name)
             .replace("{{max_steps}}", str(self.max_steps))
         )
@@ -424,18 +439,21 @@ class Agent:
         for tool_name in names:
             tool = self._tool_registry.get(tool_name)
             if tool:
-                tools.append({
-                    "type": "function",
-                    "function": {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "parameters": tool.schema(),
-                    },
-                })
+                tools.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": tool.schema(),
+                        },
+                    }
+                )
         return tools if tools else None
 
     async def _execute_tools(
-        self, tool_calls: list[dict[str, object]],
+        self,
+        tool_calls: list[dict[str, object]],
     ) -> list[dict[str, object]]:
         """Execute tool calls using the tool registry."""
         if self._tool_registry is None:
@@ -453,11 +471,13 @@ class Agent:
 
             tool = self._tool_registry.get(name)
             if tool is None:
-                results.append({
-                    "tool_call_id": call.get("id", ""),
-                    "name": name,
-                    "error": f"Unknown tool: {name}",
-                })
+                results.append(
+                    {
+                        "tool_call_id": call.get("id", ""),
+                        "name": name,
+                        "error": f"Unknown tool: {name}",
+                    }
+                )
                 continue
 
             # Emit tool_call event for UI
@@ -473,11 +493,13 @@ class Agent:
                     try:
                         kwargs = json.loads(args_raw) if args_raw else {}
                     except json.JSONDecodeError as je:
-                        results.append({
-                            "tool_call_id": call.get("id", ""),
-                            "name": name,
-                            "error": f"Invalid JSON arguments: {je}. Please retry with valid JSON.",
-                        })
+                        results.append(
+                            {
+                                "tool_call_id": call.get("id", ""),
+                                "name": name,
+                                "error": f"Invalid JSON args: {je}. Retry with valid JSON.",
+                            }
+                        )
                         continue
                 elif isinstance(args_raw, dict):
                     kwargs = args_raw
@@ -485,29 +507,41 @@ class Agent:
                     kwargs = {}
 
                 tool_result = await tool.invoke(**kwargs)
-                await self._emit("agent.tool_result", {
-                    "tool": name,
-                    "success": tool_result.success,
-                    "summary": str(tool_result.data)[:200] if tool_result.data else None,
-                    "error": tool_result.error,
-                })
-                results.append({
-                    "tool_call_id": call.get("id", ""),
-                    "name": name,
-                    "success": tool_result.success,
-                    "data": tool_result.data,
-                    "error": tool_result.error,
-                })
+                await self._emit(
+                    "agent.tool_result",
+                    {
+                        "tool": name,
+                        "success": tool_result.success,
+                        "summary": str(tool_result.data)[:200] if tool_result.data else None,
+                        "error": tool_result.error,
+                    },
+                )
+                results.append(
+                    {
+                        "tool_call_id": call.get("id", ""),
+                        "name": name,
+                        "success": tool_result.success,
+                        "data": tool_result.data,
+                        "error": tool_result.error,
+                    }
+                )
             except Exception as e:
                 logger.error("Tool '%s' execution failed: %s", name, e)
-                await self._emit("agent.tool_result", {
-                    "tool": name, "success": False, "error": str(e),
-                })
-                results.append({
-                    "tool_call_id": call.get("id", ""),
-                    "name": name,
-                    "error": str(e),
-                })
+                await self._emit(
+                    "agent.tool_result",
+                    {
+                        "tool": name,
+                        "success": False,
+                        "error": str(e),
+                    },
+                )
+                results.append(
+                    {
+                        "tool_call_id": call.get("id", ""),
+                        "name": name,
+                        "error": str(e),
+                    }
+                )
 
         return results
 
@@ -519,7 +553,8 @@ class Agent:
 
         if self._skill_engine:
             skill_prompt = self._skill_engine.build_prompt_injection(
-                self.config.name, task,
+                self.config.name,
+                task,
             )
             if skill_prompt.strip():
                 parts.append(skill_prompt)

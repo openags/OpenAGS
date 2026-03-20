@@ -44,7 +44,7 @@ def _read_skills(folder: Path) -> list[str]:
         if text.startswith("---"):
             try:
                 end = text.index("---", 3)
-                text = text[end + 3:].strip()
+                text = text[end + 3 :].strip()
             except ValueError:
                 pass
         if text.strip():

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class HookResult(BaseModel):
     """Result of a hook execution."""
+
     allow: bool = True
     reason: str = ""
     modified_input: dict[str, object] | None = None
@@ -30,6 +31,7 @@ class HookResult(BaseModel):
 
 class HookEntry(BaseModel):
     """Single hook definition."""
+
     matcher: str = ""  # tool name pattern or empty for all
     command: str = ""  # shell command to run
     timeout: int = Field(default=10, ge=1, le=60)
@@ -37,6 +39,7 @@ class HookEntry(BaseModel):
 
 class HookConfig(BaseModel):
     """Hook configuration from SOUL.md frontmatter or project config."""
+
     PreToolUse: list[HookEntry] = []
     PostToolUse: list[HookEntry] = []
     AgentStart: list[HookEntry] = []
@@ -57,11 +60,13 @@ def parse_hooks(raw: dict[str, object] | None) -> HookConfig:
         entries = []
         for entry in entries_raw:
             if isinstance(entry, dict):
-                entries.append(HookEntry(
-                    matcher=entry.get("matcher", ""),
-                    command=entry.get("command", ""),
-                    timeout=entry.get("timeout", 10),
-                ))
+                entries.append(
+                    HookEntry(
+                        matcher=entry.get("matcher", ""),
+                        command=entry.get("command", ""),
+                        timeout=entry.get("timeout", 10),
+                    )
+                )
         setattr(config, event_name, entries)
     return config
 
@@ -81,7 +86,10 @@ class HookRunner:
         return name in patterns or "*" in patterns
 
     async def run_pre_tool(
-        self, tool_name: str, tool_input: dict[str, object], agent_name: str,
+        self,
+        tool_name: str,
+        tool_input: dict[str, object],
+        agent_name: str,
     ) -> HookResult:
         """Run PreToolUse hooks. Returns allow=False if any hook blocks."""
         for entry in self._config.PreToolUse:
@@ -89,18 +97,24 @@ class HookRunner:
                 continue
             if not entry.command:
                 continue
-            result = await self._execute_hook(entry, {
-                "hook_event_name": "PreToolUse",
-                "tool_name": tool_name,
-                "tool_input": tool_input,
-                "agent_name": agent_name,
-            })
+            result = await self._execute_hook(
+                entry,
+                {
+                    "hook_event_name": "PreToolUse",
+                    "tool_name": tool_name,
+                    "tool_input": tool_input,
+                    "agent_name": agent_name,
+                },
+            )
             if not result.allow:
                 return result
         return HookResult(allow=True)
 
     async def run_post_tool(
-        self, tool_name: str, tool_result: str, agent_name: str,
+        self,
+        tool_name: str,
+        tool_result: str,
+        agent_name: str,
     ) -> None:
         """Run PostToolUse hooks (informational, cannot block)."""
         for entry in self._config.PostToolUse:
@@ -108,34 +122,43 @@ class HookRunner:
                 continue
             if not entry.command:
                 continue
-            await self._execute_hook(entry, {
-                "hook_event_name": "PostToolUse",
-                "tool_name": tool_name,
-                "tool_result": tool_result[:2000],
-                "agent_name": agent_name,
-            })
+            await self._execute_hook(
+                entry,
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": tool_name,
+                    "tool_result": tool_result[:2000],
+                    "agent_name": agent_name,
+                },
+            )
 
     async def run_agent_start(self, agent_name: str, task: str) -> None:
         """Run AgentStart hooks."""
         for entry in self._config.AgentStart:
             if not entry.command:
                 continue
-            await self._execute_hook(entry, {
-                "hook_event_name": "AgentStart",
-                "agent_name": agent_name,
-                "task": task[:500],
-            })
+            await self._execute_hook(
+                entry,
+                {
+                    "hook_event_name": "AgentStart",
+                    "agent_name": agent_name,
+                    "task": task[:500],
+                },
+            )
 
     async def run_agent_stop(self, agent_name: str, success: bool) -> HookResult:
         """Run AgentStop hooks. Can block completion."""
         for entry in self._config.AgentStop:
             if not entry.command:
                 continue
-            result = await self._execute_hook(entry, {
-                "hook_event_name": "AgentStop",
-                "agent_name": agent_name,
-                "success": success,
-            })
+            result = await self._execute_hook(
+                entry,
+                {
+                    "hook_event_name": "AgentStop",
+                    "agent_name": agent_name,
+                    "success": success,
+                },
+            )
             if not result.allow:
                 return result
         return HookResult(allow=True)

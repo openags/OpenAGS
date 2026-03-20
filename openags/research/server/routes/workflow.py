@@ -5,12 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 
 from openags.agent.directive import parse_directive
 from openags.agent.discovery import AgentDiscovery
 from openags.agent.status import parse_status
-from openags.models import WorkflowConfig
 
 router = APIRouter()
 
@@ -65,7 +64,9 @@ async def get_workflow_config(request: Request, project_id: str) -> dict[str, An
 
 
 @router.put("/{project_id}/config")
-async def update_workflow_config(request: Request, project_id: str, body: dict[str, Any]) -> dict[str, Any]:
+async def update_workflow_config(
+    request: Request, project_id: str, body: dict[str, Any]
+) -> dict[str, Any]:
     """Update workflow configuration."""
     from openags.research.config import load_config, set_config_value
 

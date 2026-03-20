@@ -17,10 +17,13 @@ MAX_LINE_LEN = 500
 
 
 class FileSearchTool:
-    """Search file contents by regex pattern within the project workspace (satisfies Tool protocol)."""
+    """Search file contents by regex pattern within the project workspace."""
 
     _name = "grep"
-    _description = "Search for a regex pattern across files in the project workspace. Returns matching lines with file paths and line numbers."
+    _description = (
+        "Search for a regex pattern across files in the project workspace."
+        " Returns matching lines with file paths and line numbers."
+    )
 
     def __init__(self, workspace: Path) -> None:
         self._workspace = workspace

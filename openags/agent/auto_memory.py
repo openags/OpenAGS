@@ -48,13 +48,17 @@ class AutoMemory:
         )
 
         try:
-            response = await backend.execute(prompt, system="You extract categorized knowledge concisely.", timeout=30)  # type: ignore[attr-defined]
+            response = await backend.execute(
+                prompt, system="You extract categorized knowledge concisely.", timeout=30
+            )  # type: ignore[attr-defined]
             content = response.content.strip()
             if "NONE" in content.upper() or len(content) < 20:
                 return
 
             # Deduplicate: check if similar content already exists
-            existing = self._memory_path.read_text(encoding="utf-8") if self._memory_path.exists() else ""
+            existing = (
+                self._memory_path.read_text(encoding="utf-8") if self._memory_path.exists() else ""
+            )
             if self._is_duplicate(content, existing):
                 logger.debug("Auto-memory skipped duplicate for %s", self._memory_path.parent.name)
                 return
@@ -73,7 +77,9 @@ class AutoMemory:
             return ""
         context_lines = lines[:MAX_CONTEXT_LINES]
         if len(lines) > MAX_CONTEXT_LINES:
-            context_lines.append(f"\n... ({len(lines) - MAX_CONTEXT_LINES} more lines in MEMORY.md)")
+            context_lines.append(
+                f"\n... ({len(lines) - MAX_CONTEXT_LINES} more lines in MEMORY.md)"
+            )
         return "\n".join(context_lines)
 
     def _is_duplicate(self, new_content: str, existing: str) -> bool:

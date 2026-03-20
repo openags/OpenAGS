@@ -169,15 +169,18 @@ def chat(
     agent: str = typer.Option("ags", "--agent", "-a", help="Agent name"),
     no_stream: bool = typer.Option(False, "--no-stream", help="Disable streaming output"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
-    continue_session: bool = typer.Option(False, "--continue", "-c", help="Continue most recent session"),
+    continue_session: bool = typer.Option(
+        False, "--continue", "-c", help="Continue most recent session"
+    ),
     resume: str = typer.Option("", "--resume", "-r", help="Resume session by ID or name"),
     session_name: str = typer.Option("", "--name", "-n", help="Name this session"),
 ) -> None:
     """Interactive multi-turn chat with a research agent."""
+    from openags.agent.memory import MemorySystem
     from openags.research.backend.router import RuntimeRouter
     from openags.research.config import load_config
-    from openags.agent.memory import MemorySystem
     from openags.research.project import ProjectManager
+
     _setup_logging("DEBUG" if verbose else "WARNING")
 
     # Agent name
@@ -201,6 +204,7 @@ def chat(
 
     # Determine module directory for this agent
     from openags.agent.discovery import AgentDiscovery
+
     discovered = AgentDiscovery.discover(proj.workspace)
     agent_config = discovered.get(agent_name)
     if agent_config is None:
@@ -217,6 +221,7 @@ def chat(
 
     # Build system prompt using the new Agent class
     from openags.agent.loop import Agent
+
     temp_agent = Agent(
         config=agent_config,
         module_dir=module_dir,
@@ -232,7 +237,10 @@ def chat(
 
     # Session resume support (Phase 8)
     from openags.agent.session import SessionManager
-    session_mgr = SessionManager(module_dir if agent_config.mode != "root" else proj.workspace / ".openags")
+
+    session_mgr = SessionManager(
+        module_dir if agent_config.mode != "root" else proj.workspace / ".openags"
+    )
     chat_messages: list[dict[str, str]] = []
     total_tokens_in = 0
     total_tokens_out = 0
@@ -245,7 +253,9 @@ def chat(
         if existing:
             for msg in existing.messages:
                 chat_messages.append({"role": msg.role, "content": msg.content})
-            console.print(f"[dim]Resumed session: {existing.id} ({len(existing.messages)} messages)[/]")
+            console.print(
+                f"[dim]Resumed session: {existing.id} ({len(existing.messages)} messages)[/]"
+            )
         else:
             console.print("[dim]No previous session found, starting fresh.[/]")
 
@@ -333,8 +343,10 @@ def chat(
                         module_dir = proj.workspace / agent_name
                     memory = MemorySystem(module_dir, project_dir=proj.workspace)
                     temp_agent = Agent(
-                        config=agent_config, module_dir=module_dir,
-                        backend=backend, memory=memory,
+                        config=agent_config,
+                        module_dir=module_dir,
+                        backend=backend,
+                        memory=memory,
                     )
                     system_prompt = temp_agent._load_soul()
                     ctx = memory.get_context(None)
@@ -423,9 +435,9 @@ def run(
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """Run automated research pipeline."""
+    from openags.models import RunMode
     from openags.research.config import load_config
     from openags.research.orchestrator import Orchestrator
-    from openags.models import RunMode
 
     _setup_logging("DEBUG" if verbose else "INFO")
     _check_backend_ready()

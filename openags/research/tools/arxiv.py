@@ -128,9 +128,7 @@ class ArxivClient:
         updated = (updated_el.text or "") if updated_el is not None else ""
 
         categories = [
-            c.get("term", "")
-            for c in entry.findall(f"{ATOM_NS}category")
-            if c.get("term")
+            c.get("term", "") for c in entry.findall(f"{ATOM_NS}category") if c.get("term")
         ]
 
         doi_el = entry.find(f"{ARXIV_NS}doi")
@@ -166,7 +164,9 @@ class ArxivTool:
     """arXiv search as an OpenAGS Tool (satisfies Tool protocol)."""
 
     _name = "arxiv"
-    _description = "Search academic papers on arXiv by query, returning titles, abstracts, and metadata."
+    _description = (
+        "Search academic papers on arXiv by query, returning titles, abstracts, and metadata."
+    )
 
     def __init__(self, timeout: int = 30) -> None:
         self._client = ArxivClient(timeout=timeout)

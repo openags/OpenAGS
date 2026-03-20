@@ -12,10 +12,10 @@ import yaml
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from openags.agent.soul import parse_soul
 from openags.agent.errors import ProjectError
-from openags.research.orchestrator import Orchestrator
+from openags.agent.soul import parse_soul
 from openags.models import AgentConfig
+from openags.research.orchestrator import Orchestrator
 
 router = APIRouter()
 
@@ -120,7 +120,7 @@ def _parse_skill_file(path: Path) -> SkillInfo:
 
     end = text.index("---", 3)
     frontmatter_text = text[3:end]
-    body = text[end + 3:].strip()
+    body = text[end + 3 :].strip()
 
     frontmatter = yaml.safe_load(frontmatter_text)
     if not isinstance(frontmatter, dict):
@@ -249,7 +249,9 @@ def _list_global_skills(section: str) -> list[SkillInfo]:
 
 @router.get("/{project_id}/{section}", response_model=AgentConfigResponse)
 async def get_agent_config(
-    request: Request, project_id: str, section: str,
+    request: Request,
+    project_id: str,
+    section: str,
 ) -> AgentConfigResponse:
     """Get the full agent configuration for a project section (soul + skills)."""
     module_dir = _resolve_module_dir(request, project_id, section)
@@ -267,7 +269,9 @@ async def get_agent_config(
 
 @router.get("/{project_id}/{section}/frontmatter", response_model=AgentFrontmatterResponse)
 async def get_agent_frontmatter(
-    request: Request, project_id: str, section: str,
+    request: Request,
+    project_id: str,
+    section: str,
 ) -> AgentFrontmatterResponse:
     """Get parsed SOUL.md frontmatter as structured AgentConfig data."""
     module_dir = _resolve_module_dir(request, project_id, section)
@@ -293,7 +297,10 @@ async def get_agent_frontmatter(
 
 @router.put("/{project_id}/{section}/soul")
 async def save_soul(
-    request: Request, project_id: str, section: str, body: SoulUpdate,
+    request: Request,
+    project_id: str,
+    section: str,
+    body: SoulUpdate,
 ) -> dict[str, str]:
     """Save SOUL.md content for a project section."""
     module_dir = _resolve_module_dir(request, project_id, section)
@@ -305,7 +312,9 @@ async def save_soul(
 
 @router.get("/{project_id}/{section}/skills", response_model=list[SkillInfo])
 async def list_skills(
-    request: Request, project_id: str, section: str,
+    request: Request,
+    project_id: str,
+    section: str,
 ) -> list[SkillInfo]:
     """List all skills for a project section."""
     module_dir = _resolve_module_dir(request, project_id, section)
@@ -314,7 +323,10 @@ async def list_skills(
 
 @router.post("/{project_id}/{section}/skills", response_model=SkillInfo, status_code=201)
 async def create_skill(
-    request: Request, project_id: str, section: str, skill: SkillCreate,
+    request: Request,
+    project_id: str,
+    section: str,
+    skill: SkillCreate,
 ) -> SkillInfo:
     """Create a new skill file in a project section."""
     module_dir = _resolve_module_dir(request, project_id, section)
@@ -350,7 +362,11 @@ async def create_skill(
 
 @router.put("/{project_id}/{section}/skills/{name}", response_model=SkillInfo)
 async def update_skill(
-    request: Request, project_id: str, section: str, name: str, skill: SkillUpdate,
+    request: Request,
+    project_id: str,
+    section: str,
+    name: str,
+    skill: SkillUpdate,
 ) -> SkillInfo:
     """Update an existing skill file."""
     module_dir = _resolve_module_dir(request, project_id, section)
@@ -361,7 +377,9 @@ async def update_skill(
 
     existing = _parse_skill_file(file_path)
 
-    updated_description = skill.description if skill.description is not None else existing.description
+    updated_description = (
+        skill.description if skill.description is not None else existing.description
+    )
     updated_roles = skill.roles if skill.roles is not None else existing.roles
     updated_tools = skill.tools if skill.tools is not None else existing.tools
     updated_triggers = skill.triggers if skill.triggers is not None else existing.triggers
@@ -391,7 +409,10 @@ async def update_skill(
 
 @router.delete("/{project_id}/{section}/skills/{name}")
 async def delete_skill(
-    request: Request, project_id: str, section: str, name: str,
+    request: Request,
+    project_id: str,
+    section: str,
+    name: str,
 ) -> dict[str, str]:
     """Delete a skill file."""
     module_dir = _resolve_module_dir(request, project_id, section)

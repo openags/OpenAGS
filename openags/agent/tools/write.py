@@ -16,7 +16,10 @@ class FileWriteTool:
     """Write content to a file in the project workspace (satisfies Tool protocol)."""
 
     _name = "write"
-    _description = "Create or overwrite a file in the project workspace. Parent directories are created automatically."
+    _description = (
+        "Create or overwrite a file in the project workspace."
+        " Parent directories are created automatically."
+    )
 
     def __init__(self, workspace: Path) -> None:
         self._workspace = workspace

@@ -32,7 +32,12 @@ from openags.agent.loop import Agent
 from openags.agent.memory import MemorySystem
 from openags.agent.session import SessionManager
 from openags.agent.soul import parse_soul, write_soul
-from openags.agent.status import parse_status, status_is_terminal, write_status, write_status_from_result
+from openags.agent.status import (
+    parse_status,
+    status_is_terminal,
+    write_status,
+    write_status_from_result,
+)
 from openags.agent.tools.base import ToolRegistry, create_engine_registry
 
 __all__ = [

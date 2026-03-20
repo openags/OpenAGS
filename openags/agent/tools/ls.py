@@ -18,7 +18,9 @@ class FileListTool:
     """List directory contents or search files by glob pattern (satisfies Tool protocol)."""
 
     _name = "ls"
-    _description = "List directory contents or find files by glob pattern within the project workspace."
+    _description = (
+        "List directory contents or find files by glob pattern within the project workspace."
+    )
 
     def __init__(self, workspace: Path) -> None:
         self._workspace = workspace
@@ -50,12 +52,14 @@ class FileListTool:
                         rel = str(p.relative_to(self._workspace))
                     except ValueError:
                         continue
-                    entries.append({
-                        "name": p.name,
-                        "path": rel,
-                        "is_dir": p.is_dir(),
-                        "size": p.stat().st_size if p.is_file() else 0,
-                    })
+                    entries.append(
+                        {
+                            "name": p.name,
+                            "path": rel,
+                            "is_dir": p.is_dir(),
+                            "size": p.stat().st_size if p.is_file() else 0,
+                        }
+                    )
                 truncated = len(matches) > MAX_ENTRIES
             else:
                 # List directory
@@ -67,17 +71,19 @@ class FileListTool:
                 items = sorted(dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
                 entries = []
                 for p in items[:MAX_ENTRIES]:
-                    entries.append({
-                        "name": p.name,
-                        "path": str(p.relative_to(self._workspace)),
-                        "is_dir": p.is_dir(),
-                        "size": p.stat().st_size if p.is_file() else 0,
-                    })
+                    entries.append(
+                        {
+                            "name": p.name,
+                            "path": str(p.relative_to(self._workspace)),
+                            "is_dir": p.is_dir(),
+                            "size": p.stat().st_size if p.is_file() else 0,
+                        }
+                    )
                 truncated = len(items) > MAX_ENTRIES
 
             result_text = "\n".join(
                 f"{'[DIR] ' if e['is_dir'] else ''}{e['path']}"
-                + (f" ({e['size']} bytes)" if not e['is_dir'] else "")
+                + (f" ({e['size']} bytes)" if not e["is_dir"] else "")
                 for e in entries
             )
             if truncated:
@@ -103,7 +109,7 @@ class FileListTool:
                 },
                 "pattern": {
                     "type": "string",
-                    "description": "Glob pattern to search for files (e.g. '**/*.py', 'manuscript/*.tex')",
+                    "description": "Glob pattern to search for files (e.g. '**/*.py')",
                 },
             },
             "required": [],

@@ -56,6 +56,7 @@ class WebSocketAdapter:
 
     def __init__(self) -> None:
         from openags.research.server.routes.ws import manager
+
         self._manager = manager
 
     @property

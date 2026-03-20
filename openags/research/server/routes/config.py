@@ -222,6 +222,7 @@ async def update_compute_config(request: Request, body: ComputeConfigRequest) ->
 async def list_mcp_servers(request: Request) -> list[dict]:
     """List configured MCP servers from mcp.json."""
     import json
+
     config = request.app.state.config
     mcp_path = config.workspace_dir / "mcp.json"
     if not mcp_path.exists():
@@ -229,7 +230,10 @@ async def list_mcp_servers(request: Request) -> list[dict]:
     try:
         data = json.loads(mcp_path.read_text(encoding="utf-8"))
         servers = data.get("servers", [])
-        return [{"name": s.get("name", ""), "command": s.get("command", ""), "args": s.get("args", [])} for s in servers]
+        return [
+            {"name": s.get("name", ""), "command": s.get("command", ""), "args": s.get("args", [])}
+            for s in servers
+        ]
     except Exception:
         return []
 
@@ -238,6 +242,6 @@ async def list_mcp_servers(request: Request) -> list[dict]:
 async def list_plugins(request: Request) -> list[dict]:
     """List installed plugins."""
     orch = request.app.state.orchestrator
-    if hasattr(orch, '_plugin_mgr'):
+    if hasattr(orch, "_plugin_mgr"):
         return orch._plugin_mgr.list_plugins()
     return []

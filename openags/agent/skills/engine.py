@@ -104,7 +104,7 @@ class SkillEngine:
         # Find closing ---
         end = text.index("---", 3)
         frontmatter_text = text[3:end]
-        body = text[end + 3:].strip()
+        body = text[end + 3 :].strip()
 
         frontmatter = yaml.safe_load(frontmatter_text)
         if not isinstance(frontmatter, dict):

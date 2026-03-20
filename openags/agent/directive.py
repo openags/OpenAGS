@@ -6,7 +6,7 @@ import os
 import re
 import secrets
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -18,7 +18,7 @@ DIRECTIVE_FILENAME = "DIRECTIVE.md"
 
 def generate_directive_id(agent_name: str) -> str:
     """Generate a unique directive ID: d-YYYYMMDD-HHmmss-agent-4hex."""
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     ts = now.strftime("%Y%m%d-%H%M%S")
     hex4 = secrets.token_hex(2)
     return f"d-{ts}-{agent_name}-{hex4}"
@@ -34,7 +34,7 @@ def write_directive(agent_dir: Path, directive: DirectiveModel) -> None:
         "phase": directive.phase,
         "action": directive.action.value,
         "priority": directive.priority.value,
-        "created_at": directive.created_at or datetime.now(tz=timezone.utc).isoformat(),
+        "created_at": directive.created_at or datetime.now(tz=UTC).isoformat(),
         "timeout_seconds": directive.timeout_seconds,
         "max_attempts": directive.max_attempts,
         "attempt": directive.attempt,
@@ -91,7 +91,7 @@ def parse_directive(agent_dir: Path) -> DirectiveModel | None:
         try:
             fm = yaml.safe_load(fm_match.group(1))
             if isinstance(fm, dict) and "directive_id" in fm:
-                body = raw[fm_match.end():]
+                body = raw[fm_match.end() :]
                 return _build_directive_from_parsed(fm, body)
         except yaml.YAMLError:
             pass
@@ -122,13 +122,19 @@ def _build_directive_from_parsed(fm: dict[str, object], body: str) -> DirectiveM
     return DirectiveModel(
         directive_id=str(fm.get("directive_id", "unknown")),
         phase=str(fm.get("phase", "")),
-        action=DirectiveAction(action_val) if action_val in DirectiveAction.__members__.values() else DirectiveAction.EXECUTE,
-        priority=DirectivePriority(priority_val) if priority_val in DirectivePriority.__members__.values() else DirectivePriority.NORMAL,
+        action=DirectiveAction(action_val)
+        if action_val in DirectiveAction.__members__.values()
+        else DirectiveAction.EXECUTE,
+        priority=DirectivePriority(priority_val)
+        if priority_val in DirectivePriority.__members__.values()
+        else DirectivePriority.NORMAL,
         created_at=str(fm.get("created_at", "")),
         timeout_seconds=int(fm.get("timeout_seconds", 1800)),
         max_attempts=int(fm.get("max_attempts", 2)),
         attempt=int(fm.get("attempt", 1)),
-        decision=DirectiveDecision(decision_val) if decision_val in DirectiveDecision.__members__.values() else DirectiveDecision.PROCEED,
+        decision=DirectiveDecision(decision_val)
+        if decision_val in DirectiveDecision.__members__.values()
+        else DirectiveDecision.PROCEED,
         decision_reason=str(fm.get("decision_reason", "")),
         depends_on=list(fm.get("depends_on", [])),
         task=_extract_section(body, "Task"),

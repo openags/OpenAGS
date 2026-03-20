@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from openags.research.messaging.protocol import Channel
 from openags.models import MessagingConfig
+from openags.research.messaging.protocol import Channel
 
 logger = logging.getLogger(__name__)
 

@@ -71,7 +71,11 @@ class FeishuChannel:
             "card": {
                 "header": {
                     "title": {"tag": "plain_text", "content": f"{emoji} {title}"},
-                    "template": "blue" if level == "info" else "red" if level == "error" else "orange",
+                    "template": "blue"
+                    if level == "info"
+                    else "red"
+                    if level == "error"
+                    else "orange",
                 },
                 "elements": [
                     {"tag": "markdown", "content": body},
