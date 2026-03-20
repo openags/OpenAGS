@@ -47,9 +47,7 @@ jobs:
 
       - name: Build & Package
         working-directory: desktop
-        run: pnpm package:${{ matrix.platform }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: electron-vite build && electron-builder --${{ matrix.platform }} --publish never --config electron-builder.yml
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

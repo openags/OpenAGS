@@ -2,6 +2,11 @@
   "name": "openags-desktop",
   "version": "0.0.1",
   "description": "Open Autonomous Generalist Scientist — Desktop",
+  "homepage": "https://github.com/openags/OpenAGS",
+  "author": {
+    "name": "OpenAGS Contributors",
+    "email": "openags@users.noreply.github.com"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
