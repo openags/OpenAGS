@@ -51,8 +51,8 @@ type InlineInput = {
 
 type DeleteConfirm = { path: string } | null
 
-export default function ManuscriptEditor({ projectId, projectName }: Props): React.ReactElement {
-  const moduleParam = 'module=manuscript'
+export default function ProposalEditor({ projectId, projectName }: Props): React.ReactElement {
+  const moduleParam = 'module=proposal'
   const { t } = useLocale()
   const [tree, setTree] = useState<FileEntry[]>([])
   const [openTabs, setOpenTabs] = useState<OpenTab[]>([])

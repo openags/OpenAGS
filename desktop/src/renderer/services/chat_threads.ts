@@ -71,7 +71,10 @@ export function clearProjectThreads(projectId: string): void {
       changed = true
     }
   }
-  if (changed) saveThreadStore(store)
+  if (changed) {
+    saveThreadStore(store)
+    window.dispatchEvent(new Event('openags-threads-updated'))
+  }
 }
 
 export function saveThreadStore(store: ThreadStore): void {

@@ -103,12 +103,22 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
     return () => window.removeEventListener('openags-threads-updated', handler)
   }, [])
 
-  useEffect(() => {
+  const fetchSidebarProjects = useCallback(() => {
     api
       .get<ProjectItem[]>('/api/projects/')
       .then(setProjects)
       .catch(() => {})
-  }, [location.pathname])
+  }, [])
+
+  useEffect(() => {
+    fetchSidebarProjects()
+  }, [location.pathname, fetchSidebarProjects])
+
+  useEffect(() => {
+    const handler = () => fetchSidebarProjects()
+    window.addEventListener('openags-projects-updated', handler)
+    return () => window.removeEventListener('openags-projects-updated', handler)
+  }, [fetchSidebarProjects])
 
   // Fetch modules dynamically when a project is expanded
   useEffect(() => {

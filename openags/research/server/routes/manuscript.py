@@ -71,13 +71,20 @@ def _get_pm(request: Request) -> ProjectManager:
     return request.app.state.orchestrator.project_mgr
 
 
-def _manuscript_dir(pm: ProjectManager, project_id: str) -> Path:
-    """Resolve and validate the manuscript directory for a project."""
+_ALLOWED_MODULES = {"manuscript", "proposal"}
+
+
+def _manuscript_dir(
+    pm: ProjectManager, project_id: str, module: str = "manuscript"
+) -> Path:
+    """Resolve and validate a document module directory for a project."""
+    if module not in _ALLOWED_MODULES:
+        raise HTTPException(status_code=400, detail=f"Invalid module: {module}")
     try:
         project = pm.get(project_id)
     except ProjectError:
         raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
-    ms_dir = project.workspace / "manuscript"
+    ms_dir = project.workspace / module
     ms_dir.mkdir(parents=True, exist_ok=True)
     return ms_dir
 
@@ -149,16 +156,20 @@ def _build_tree(directory: Path, base: Path) -> list[FileEntry]:
 
 
 @router.get("/{project_id}/tree", response_model=list[FileEntry])
-async def get_file_tree(request: Request, project_id: str) -> list[FileEntry]:
-    """Get the complete file tree under manuscript/."""
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+async def get_file_tree(
+    request: Request, project_id: str, module: str = "manuscript"
+) -> list[FileEntry]:
+    """Get the complete file tree under a document module directory."""
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     return _build_tree(ms_dir, ms_dir)
 
 
 @router.get("/{project_id}/file")
-async def read_file(request: Request, project_id: str, path: str) -> FileContent:
-    """Read a file from manuscript/ by relative path."""
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+async def read_file(
+    request: Request, project_id: str, path: str, module: str = "manuscript"
+) -> FileContent:
+    """Read a file by relative path."""
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     file_path = _safe_path(ms_dir, path)
 
     if not file_path.exists():
@@ -175,14 +186,16 @@ async def read_file(request: Request, project_id: str, path: str) -> FileContent
 
 
 @router.put("/{project_id}/file")
-async def write_file(request: Request, project_id: str, body: WriteFileRequest) -> FileContent:
-    """Write (create or update) a file in manuscript/.
+async def write_file(
+    request: Request, project_id: str, body: WriteFileRequest, module: str = "manuscript"
+) -> FileContent:
+    """Write (create or update) a file.
 
     Automatically creates a version snapshot before overwriting.
     """
     import shutil
 
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     file_path = _safe_path(ms_dir, body.path)
 
     # Auto-snapshot existing file before overwrite
@@ -205,9 +218,10 @@ async def create_entry(
     request: Request,
     project_id: str,
     body: CreateRequest,
+    module: str = "manuscript",
 ) -> dict[str, str]:
-    """Create a new file or directory in manuscript/."""
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    """Create a new file or directory."""
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     target = _safe_path(ms_dir, body.path)
 
     if target.exists():
@@ -227,9 +241,10 @@ async def rename_entry(
     request: Request,
     project_id: str,
     body: RenameRequest,
+    module: str = "manuscript",
 ) -> dict[str, str]:
-    """Rename or move a file/directory within manuscript/."""
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    """Rename or move a file/directory."""
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     old = _safe_path(ms_dir, body.old_path)
     new = _safe_path(ms_dir, body.new_path)
 
@@ -249,9 +264,10 @@ async def delete_entry(
     request: Request,
     project_id: str,
     path: str,
+    module: str = "manuscript",
 ) -> dict[str, str]:
-    """Delete a file or directory from manuscript/."""
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    """Delete a file or directory."""
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     target = _safe_path(ms_dir, path)
 
     if not target.exists():
@@ -295,6 +311,7 @@ async def compile_latex(
     project_id: str,
     path: str = "main.tex",
     engine: str | None = None,
+    module: str = "manuscript",
 ) -> CompileResult:
     """Compile a LaTeX file to PDF.
 
@@ -303,7 +320,7 @@ async def compile_latex(
     Returns the path to the generated PDF and any compilation errors.
     """
     pm = _get_pm(request)
-    ms_dir = _manuscript_dir(pm, project_id)
+    ms_dir = _manuscript_dir(pm, project_id, module)
     tex_path = _safe_path(ms_dir, path)
 
     if not tex_path.exists():
@@ -412,14 +429,16 @@ async def compile_latex(
 
 
 @router.get("/{project_id}/pdf/{filename}")
-async def get_pdf(request: Request, project_id: str, filename: str) -> None:
+async def get_pdf(
+    request: Request, project_id: str, filename: str, module: str = "manuscript"
+) -> None:
     """Serve a compiled PDF file."""
     from fastapi.responses import FileResponse
 
     if not re.match(r"^[\w.-]+\.pdf$", filename):
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     pdf_path = _safe_path(ms_dir, filename)
 
     if not pdf_path.exists():
@@ -460,12 +479,13 @@ async def create_snapshot(
     request: Request,
     project_id: str,
     body: WriteFileRequest,
+    module: str = "manuscript",
 ) -> VersionEntry:
     """Create a versioned snapshot of a file's current content."""
     import shutil
     from datetime import datetime
 
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     file_path = _safe_path(ms_dir, body.path)
 
     if not file_path.exists():
@@ -495,11 +515,12 @@ async def list_versions(
     request: Request,
     project_id: str,
     path: str,
+    module: str = "manuscript",
 ) -> list[VersionEntry]:
     """List all version snapshots for a file."""
     from datetime import datetime
 
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     _safe_path(ms_dir, path)  # validate
 
     ver_dir = _versions_dir(ms_dir, path)
@@ -527,9 +548,10 @@ async def get_version_content(
     project_id: str,
     path: str,
     version: int,
+    module: str = "manuscript",
 ) -> FileContent:
     """Get the content of a specific version snapshot."""
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     _safe_path(ms_dir, path)  # validate
 
     ver_dir = _versions_dir(ms_dir, path)
@@ -548,11 +570,12 @@ async def diff_versions(
     path: str,
     version_a: int,
     version_b: int,
+    module: str = "manuscript",
 ) -> DiffResult:
     """Compute a unified diff between two versions of a file."""
     import difflib
 
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     _safe_path(ms_dir, path)  # validate
 
     ver_dir = _versions_dir(ms_dir, path)
@@ -605,11 +628,12 @@ async def parse_pdf(
     request: Request,
     project_id: str,
     path: str,
+    module: str = "manuscript",
 ) -> ParsedPaperResponse:
-    """Parse a PDF file in the manuscript directory and return structured content."""
+    """Parse a PDF file and return structured content."""
     from openags.research.tools.pdf_parser import PDFParser
 
-    ms_dir = _manuscript_dir(_get_pm(request), project_id)
+    ms_dir = _manuscript_dir(_get_pm(request), project_id, module)
     pdf_path = _safe_path(ms_dir, path)
 
     if not pdf_path.exists():
@@ -633,7 +657,9 @@ async def parse_pdf(
 
 
 @router.get("/{project_id}/citations")
-async def get_citation_graph(request: Request, project_id: str) -> dict:
+async def get_citation_graph(
+    request: Request, project_id: str, module: str = "manuscript"
+) -> dict:
     """Get the citation graph for a project (nodes + edges)."""
     from openags.research.tools.citation_graph import build_citation_graph
 
