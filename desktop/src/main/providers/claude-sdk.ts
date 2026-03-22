@@ -84,11 +84,8 @@ export async function queryClaudeSDK(
         }
       }
 
-      // Final result
+      // Final result — text was already sent via assistant messages above
       if (msg.type === 'result') {
-        if (msg.result && typeof msg.result === 'string') {
-          writer.sendText(msg.result)
-        }
         const usage = msg.usage || {}
         writer.sendResult(
           msg.total_cost_usd || msg.cost_usd,

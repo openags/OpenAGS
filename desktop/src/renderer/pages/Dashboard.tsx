@@ -116,6 +116,7 @@ export default function Dashboard(): React.ReactElement {
     try {
       await api.delete(`/api/projects/${projectId}`)
       clearProjectThreads(projectId)
+      window.dispatchEvent(new Event('openags-projects-updated'))
       message.success(`Deleted project "${projectId}"`)
       fetchProjects()
     } catch {

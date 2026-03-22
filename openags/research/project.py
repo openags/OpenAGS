@@ -111,9 +111,10 @@ class ProjectManager:
         (project_dir / ".openags" / "history.md").touch()
         (project_dir / ".openags" / "plan.md").touch()
 
-        # Scaffold default manuscript files (for research template)
+        # Scaffold default document files (for research template)
         if template == "research":
             self._scaffold_manuscript(project_dir)
+            self._scaffold_proposal(project_dir)
 
         # Track external projects in index
         if workspace_dir is not None:
@@ -256,6 +257,100 @@ Methodology description.
 \label{sec:experiments}
 
 Experimental setup and results.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Concluding remarks.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
+""",
+                encoding="utf-8",
+            )
+
+        if not refs_bib.exists():
+            refs_bib.write_text(
+                r"""@article{example2024,
+  title   = {An Example Paper Title},
+  author  = {Last, First and Another, Author},
+  journal = {Journal of Examples},
+  year    = {2024},
+  volume  = {1},
+  pages   = {1--10},
+}
+""",
+                encoding="utf-8",
+            )
+
+    def _scaffold_proposal(self, project_dir: Path) -> None:
+        """Create default main.tex and references.bib in the proposal directory."""
+        proposal_dir = project_dir / "proposal"
+        main_tex = proposal_dir / "main.tex"
+        refs_bib = proposal_dir / "references.bib"
+
+        if not main_tex.exists():
+            main_tex.write_text(
+                r"""\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue]{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{Research Proposal: Your Title Here}
+\author{Author Name \\ Institution}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Brief summary of the proposed research.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Background and motivation.
+
+\section{Related Work}
+\label{sec:related}
+
+Review of relevant literature.
+
+\section{Problem Statement}
+\label{sec:problem}
+
+Formal problem definition and research questions.
+
+\section{Proposed Approach}
+\label{sec:approach}
+
+Description of the proposed methodology.
+
+\section{Evaluation Plan}
+\label{sec:evaluation}
+
+How the approach will be evaluated.
+
+\section{Expected Contributions}
+\label{sec:contributions}
+
+Anticipated outcomes and significance.
+
+\section{Timeline}
+\label{sec:timeline}
+
+Milestones and schedule.
 
 \section{Conclusion}
 \label{sec:conclusion}

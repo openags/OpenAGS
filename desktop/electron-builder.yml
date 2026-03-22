@@ -2,6 +2,8 @@ appId: com.openags.desktop
 productName: OpenAGS
 copyright: Copyright © 2025 OpenAGS Contributors
 
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+
 directories:
   buildResources: resources
   output: dist
@@ -13,15 +15,16 @@ files:
 mac:
   category: public.app-category.developer-tools
   target:
-    - dmg
-    - zip
+    - target: dmg
+      arch:
+        - x64
+        - arm64
   icon: resources/icon.icns
   identity: null
 
 win:
   target:
     - nsis
-    - portable
   icon: resources/icon.ico
 
 linux:

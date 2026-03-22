@@ -122,7 +122,7 @@ def _research_template() -> ProjectTemplate:
                     "upstream_files": ["../chatroom.md"],
                 },
                 soul_body=_load_soul_body("research", "proposal"),
-                subdirs=["ideas", "sessions", "skills"],
+                subdirs=["ideas", "figures", "sessions", "skills"],
             ),
             ModuleTemplate(
                 name="experiments",

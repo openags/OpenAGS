@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { api } from '../services/api'
 import ManuscriptEditor from '../components/ManuscriptEditor'
+import ProposalEditor from '../components/ProposalEditor'
 import ProjectConfig from '../components/ProjectConfig'
 import AgentConfigPanel from '../components/AgentConfigPanel'
 import TerminalPanel from '../components/TerminalPanel'
@@ -1348,11 +1349,14 @@ export default function Project(): React.ReactElement {
           />
         </div>
       )}
-      {activeSection === 'manuscript' && project ? (
+      {(activeSection === 'manuscript' || activeSection === 'proposal') && project ? (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           {/* Editor takes remaining space */}
           <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-            <ManuscriptEditor projectId={project.id} projectName={project.name} />
+            {activeSection === 'proposal'
+              ? <ProposalEditor projectId={project.id} projectName={project.name} />
+              : <ManuscriptEditor projectId={project.id} projectName={project.name} />
+            }
           </div>
 
           {/* Collapsible chat panel toggle */}
@@ -1426,7 +1430,7 @@ export default function Project(): React.ReactElement {
                     color: 'var(--text-tertiary)', textAlign: 'center', gap: 6,
                   }}>
                     <meta.Icon size={24} strokeWidth={1.2} color={meta.color} style={{ opacity: 0.4 }} />
-                    <div style={{ fontSize: 13 }}>Chat with {meta.agentLabel} about your manuscript</div>
+                    <div style={{ fontSize: 13 }}>Chat with {meta.agentLabel} about your {activeSection === 'proposal' ? 'proposal' : 'manuscript'}</div>
                   </div>
                 ) : (
                   <div style={{ maxWidth: 820, margin: '0 auto' }}>
@@ -1468,7 +1472,7 @@ export default function Project(): React.ReactElement {
                         isCliBackend ? sendCliMessage() : void sendMessage()
                       }
                     }}
-                    placeholder={`Ask ${meta.agentLabel || 'agent'} about manuscript...`}
+                    placeholder={`Ask ${meta.agentLabel || 'agent'} about ${activeSection === 'proposal' ? 'proposal' : 'manuscript'}...`}
                     rows={1}
                     style={{
                       flex: 1, border: '1px solid var(--border)', borderRadius: 8,
