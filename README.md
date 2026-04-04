@@ -7,8 +7,8 @@
 An open-source framework for fully autonomous scientific research — from literature review to manuscript writing.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776ab.svg)](https://python.org)
-[![Node.js 18+](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org)
+[![Node.js 20+](https://img.shields.io/badge/Node.js-20+-339933.svg)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6+-3178c6.svg)](https://typescriptlang.org)
 
 [Getting Started](#quick-start) &bull; [Architecture](#architecture) &bull; [Documentation](docs/architecture.md) &bull; [Citation](#citation)
 
@@ -42,45 +42,46 @@ OpenAGS orchestrates a team of AI agents that collaborate across the full resear
 
 | Dependency | Version | Required For |
 |------------|---------|-------------|
-| Python | >= 3.11 | Backend |
-| [uv](https://docs.astral.sh/uv/) | latest | Python package manager |
-| Node.js | >= 18 | UI (Desktop / Browser) |
-| pnpm | >= 8 | UI (Desktop / Browser) |
+| Node.js | >= 20 | Server & UI |
+| pnpm | >= 9 | Package manager |
 | TeX Live / BasicTeX | any | LaTeX compilation (optional) |
+| Docker | any | Sandboxed experiments (optional) |
+| Rust | >= 1.75 | CLI agent (optional, for development) |
 
 ### Install
 
 ```bash
 git clone https://github.com/openags/OpenAGS.git
 cd OpenAGS
-uv sync
-```
-
-Configure your LLM provider:
-
-```bash
-# DeepSeek (recommended for cost efficiency)
-uv run openags config default_backend.model deepseek/deepseek-chat
-uv run openags config default_backend.api_key sk-your-key
-
-# Or: OpenAI, Anthropic, Google, Ollama, OpenRouter, etc.
+pnpm install
+pnpm build
 ```
 
 ### Launch
 
+**Desktop app (Electron window + server):**
+
 ```bash
-# Desktop app (Electron)
-cd desktop && pnpm install && pnpm dev
-
-# Browser mode (no Electron required)
-cd desktop && pnpm build && pnpm serve    # → http://localhost:3001
-
-# CLI only
-uv run openags init my-project --name "My Research"
-uv run openags chat my-project
+cd packages/desktop
+npx electron-vite dev
 ```
 
-The desktop app starts the Python backend automatically.
+This starts the server on `http://127.0.0.1:19836` and opens an Electron window. On first launch, create an account from the login screen, then create a research project from the dashboard.
+
+**Server only (browser mode — no Electron):**
+
+```bash
+pnpm --filter @openags/app dev    # → http://127.0.0.1:19836
+```
+
+Open `http://127.0.0.1:19836` in your browser.
+
+**Production build:**
+
+```bash
+pnpm build
+cd packages/app && node dist/index.js   # → http://127.0.0.1:19836
+```
 
 ---
 
@@ -93,16 +94,11 @@ The desktop app starts the Python backend automatically.
 └──────────────────────┬─────────────────────────────────────────┘
                        │ WebSocket + HTTP
 ┌──────────────────────▼─────────────────────────────────────────┐
-│  Node.js Server (Express)                                       │
-│  /chat  → Claude SDK, Codex SDK, Cursor CLI, Gemini CLI         │
-│  /shell → PTY Terminal (node-pty)                                │
-│  /api/* → Proxy to Python backend                                │
-└──────────────────────┬─────────────────────────────────────────┘
-                       │ HTTP
-┌──────────────────────▼─────────────────────────────────────────┐
-│  Python Backend (FastAPI)                                        │
-│  Orchestrator → Agent Loop → Skills → Tools → Memory             │
-│  Projects, Sessions, Experiments, Manuscript, GPU, Config         │
+│  Node.js Server (@openags/app)                                  │
+│  /chat     → Claude SDK, Codex SDK, Cursor CLI, Gemini CLI      │
+│  /shell    → PTY Terminal (node-pty)                            │
+│  /workflow → Workflow Orchestrator                               │
+│  /api/*    → REST API (projects, research, config, skills)      │
 └──────────────────────┬─────────────────────────────────────────┘
                        │
 ┌──────────────────────▼─────────────────────────────────────────┐
@@ -116,66 +112,49 @@ The desktop app starts the Python backend automatically.
 ```
 OpenAGS/
 │
-├── openags/                       # Python package
-│   ├── agent/                     # Agent engine (standalone, zero dependency on research/)
-│   │   ├── loop.py                #   Agent class — step() / loop()
-│   │   ├── llm.py                 #   LLM transport (litellm)
-│   │   ├── memory.py              #   Dual-layer memory (memory.md + history.md)
-│   │   ├── session.py             #   Session persistence (JSONL)
-│   │   ├── soul.py                #   SOUL.md parser
-│   │   ├── skills/                #   Skill engine (SKILL.md, Claude Code compatible)
-│   │   └── tools/                 #   Tool registry (read, write, bash, sub_agent, mcp, ...)
+├── packages/
+│   ├── app/                       # @openags/app — Application server
+│   │   ├── src/
+│   │   │   ├── index.ts           #   Entry point
+│   │   │   ├── server.ts          #   Express + WebSocket server
+│   │   │   ├── schemas.ts         #   Zod schemas (data validation)
+│   │   │   ├── config.ts          #   YAML config loading
+│   │   │   ├── errors.ts          #   Error class hierarchy
+│   │   │   ├── providers/         #   CLI agent integrations
+│   │   │   │   ├── claude-sdk.ts  #     @anthropic-ai/claude-agent-sdk
+│   │   │   │   ├── codex-sdk.ts   #     @openai/codex-sdk
+│   │   │   │   ├── cursor-cli.ts  #     subprocess + stream-json
+│   │   │   │   └── gemini-cli.ts  #     subprocess + stream-json
+│   │   │   ├── research/          #   Research tools
+│   │   │   │   ├── project.ts     #     Project CRUD
+│   │   │   │   ├── experiment.ts  #     Docker sandbox (dockerode)
+│   │   │   │   ├── ssh.ts         #     SSH execution (ssh2)
+│   │   │   │   └── tools/         #     arXiv, Semantic Scholar, citations
+│   │   │   ├── routes/            #   REST API endpoints
+│   │   │   ├── workflow/          #   Workflow orchestration
+│   │   │   └── messaging/         #   Telegram, Discord, Feishu
+│   │   └── package.json
 │   │
-│   ├── research/                  # Research application layer
-│   │   ├── orchestrator.py        #   Central orchestrator (builtin agent only)
-│   │   ├── adapter.py             #   SOUL.md → CLAUDE.md / AGENTS.md sync
-│   │   ├── project.py             #   Project CRUD
-│   │   ├── templates.py           #   Project templates (with upstream dependency prompts)
-│   │   ├── config.py              #   Config loading / saving
-│   │   ├── backend/               #   RuntimeRouter (builtin LLMBackend)
-│   │   ├── experiment/            #   Sandbox (Local / Docker / SSH) + auto-fix engine
-│   │   ├── server/routes/         #   FastAPI routes (15 route modules)
-│   │   ├── tools/                 #   Research tools (arXiv, Semantic Scholar, GPU, ...)
-│   │   └── messaging/             #   IM notifications (Telegram, Discord, Feishu)
-│   │
-│   ├── models.py                  # Shared Pydantic models
-│   └── main.py                    # CLI entry point (Typer)
+│   └── desktop/                   # @openags/desktop — Electron + React UI
+│       ├── src/
+│       │   ├── main/              #   Electron shell
+│       │   ├── renderer/          #   React SPA
+│       │   └── preload/
+│       └── package.json
 │
-├── desktop/                       # Node.js server + React frontend
-│   ├── src/main/
-│   │   ├── server.ts              #   Express + WebSocket (PTY, Chat, API proxy)
-│   │   ├── index.ts               #   Entry point (--serve for browser, or Electron)
-│   │   ├── python-backend.ts      #   Python backend lifecycle
-│   │   └── providers/             #   CLI agent integrations
-│   │       ├── claude-sdk.ts      #     @anthropic-ai/claude-agent-sdk
-│   │       ├── codex-sdk.ts       #     @openai/codex-sdk
-│   │       ├── cursor-cli.ts      #     subprocess + stream-json
-│   │       ├── gemini-cli.ts      #     subprocess + stream-json + session ID mapping
-│   │       └── adapter.ts         #     Config sync + skill symlinks
-│   │
-│   └── src/renderer/              # React UI (shared by browser + Electron)
-│       ├── pages/
-│       │   ├── Project.tsx        #   Main workspace (Chat + Terminal + Manuscript)
-│       │   ├── Settings.tsx       #   Backend, API keys, Compute & Servers
-│       │   └── Dashboard.tsx      #   Project overview
-│       ├── components/
-│       │   ├── TerminalPanel.tsx   #   Embedded terminal (xterm.js + WebSocket)
-│       │   ├── ManuscriptEditor.tsx#   LaTeX editor + PDF compiler
-│       │   └── ProjectConfig.tsx  #   Per-project settings (compute, GPU, timeout)
-│       └── services/
-│           ├── api.ts             #   REST client (relative URLs, proxied)
-│           ├── ws.ts              #   WebSocket client
-│           └── chat_threads.ts    #   Chat persistence (localStorage + providerSessionId)
+├── cli/                           # openags-cli (Rust, future)
+│   ├── Cargo.toml
+│   └── src/main.rs
 │
 ├── skills/                        # Skill definitions (SKILL.md format)
-│   ├── search-papers/SKILL.md     #   Paper search skill
-│   ├── verify-citations/SKILL.md  #   Citation verification
-│   ├── research-workflow/SKILL.md #   Research pipeline
-│   └── agents/                    #   Default agent SOUL.md templates
+│   ├── search-papers/SKILL.md
+│   ├── verify-citations/SKILL.md
+│   └── agents/                    #   Agent SOUL.md templates
 │
-├── tests/                         # pytest test suite (330+ tests)
-├── docs/                          # Architecture docs + images
-└── pyproject.toml                 # Python project metadata
+├── docs/                          # Documentation
+├── pnpm-workspace.yaml            # Monorepo workspace config
+├── turbo.json                     # Turborepo build config
+└── package.json                   # Root workspace
 ```
 
 ---
@@ -185,41 +164,40 @@ OpenAGS/
 Stored at `~/.openags/config.yaml`:
 
 ```yaml
-default_backend:
-  type: builtin                    # builtin | claude_code | codex | gemini_cli
-  model: deepseek/deepseek-chat    # any LiteLLM model
-  api_key: sk-xxx
-  timeout: 300
+# Server settings
+workspace_dir: ~/.openags/projects
+log_level: info
 
-experiment_sandbox: local          # local | docker | remote
+# API keys (for direct LLM access)
+anthropic_api_key: sk-ant-xxx
+openai_api_key: sk-xxx
+gemini_api_key: xxx
+
+# Experiment sandbox
+experiment_sandbox: docker        # local | docker | remote
+
+# Remote servers (for GPU experiments)
 remote_servers:
   - name: gpu-server
     host: 10.0.1.50
     user: research
     key_file: ~/.ssh/id_rsa
     gpus: [0, 1, 2, 3]
+
+# Messaging notifications
+telegram:
+  bot_token: xxx
+  chat_id: xxx
+discord:
+  webhook_url: https://discord.com/api/webhooks/xxx
 ```
 
-All settings are also configurable from the UI (Settings page + Project Config).
+All settings are also configurable from the UI (Settings page).
 
 ## Supported Providers
 
 <details>
-<summary><b>LLM Providers (via LiteLLM — 100+ supported)</b></summary>
-
-| Provider | Models | Prefix |
-|----------|--------|--------|
-| DeepSeek | `deepseek/deepseek-chat`, `deepseek/deepseek-reasoner` | `deepseek/` |
-| OpenAI | `gpt-4o`, `gpt-4o-mini`, `o3-mini` | — |
-| Anthropic | `claude-sonnet-4-6`, `claude-opus-4-6` | — |
-| Google | `gemini-2.5-pro`, `gemini-2.0-flash` | — |
-| OpenRouter | `openrouter/auto` | `openrouter/` |
-| Ollama | `ollama/llama3`, `ollama/qwen2` | `ollama/` |
-
-</details>
-
-<details>
-<summary><b>CLI Agent Backends (via Node.js SDK/subprocess)</b></summary>
+<summary><b>CLI Agent Backends</b></summary>
 
 | Backend | Integration | Session Resume |
 |---------|------------|----------------|
@@ -235,16 +213,32 @@ All settings are also configurable from the UI (Settings page + Project Config).
 ## Development
 
 ```bash
-# Python
-uv sync                              # install dependencies
-uv run pytest tests/ -v              # run tests (330+)
-uv run ruff check openags/           # lint
-uv run ruff format openags/          # format
+# Install dependencies
+pnpm install
 
-# Desktop
-cd desktop
-pnpm install && pnpm dev             # dev mode with hot-reload
-pnpm build                           # production build
+# Development mode
+pnpm --filter @openags/app dev          # Server only (http://127.0.0.1:19836)
+cd packages/desktop && npx electron-vite dev  # Desktop app (Electron + React)
+
+# Build all packages
+pnpm build
+
+# Lint
+pnpm lint
+
+# Type check
+pnpm typecheck
+
+# Run tests
+pnpm test
+```
+
+### Building the Rust CLI (optional)
+
+```bash
+cd cli
+cargo build --release
+# Binary at: target/release/openags
 ```
 
 ---

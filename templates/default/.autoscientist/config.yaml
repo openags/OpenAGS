@@ -1,0 +1,27 @@
+# AutoScientist Project Configuration
+
+# Which CLI backend to use (all agents use this)
+backend: claude-code  # claude-code | codex | gemini | cursor
+
+# Auto-mode settings
+auto:
+  poll_interval: 30        # seconds between coordinator polls
+  max_iterations: 20       # max iteration cycles before stopping
+  idle_timeout: 300        # seconds of no progress before alerting user
+  pipeline:
+    - PI
+    - literature
+    - proposal
+    - experiments
+    - manuscript
+    - review
+
+# Experiment execution settings
+compute:
+  mode: local              # local | docker | remote
+  auto_fix: true           # LLM auto-fix on experiment failure
+  max_fix_attempts: 3
+
+# Project metadata
+project:
+  name: "My Research"

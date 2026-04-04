@@ -1,47 +1,65 @@
-# OpenAGS — Python backend + Node.js UI server
+# OpenAGS — TypeScript monorepo server
 # Usage:
 #   docker build -t openags .
 #   docker run -p 3001:3001 -v ~/.openags:/root/.openags openags
 
-FROM node:20-slim AS frontend
-
-WORKDIR /app/desktop
-COPY desktop/package.json desktop/pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
-
-COPY desktop/ .
-RUN pnpm build
-
-
-FROM python:3.12-slim
-
-# System deps
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install uv
-RUN pip install --no-cache-dir uv
+# ── Build Stage ────────────────────────────────────────
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Python deps
-COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev --frozen
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy source
-COPY openags/ openags/
+# Copy workspace config
+COPY package.json pnpm-workspace.yaml turbo.json ./
+
+# Copy package.json files for all packages
+COPY packages/app/package.json packages/app/
+COPY packages/desktop/package.json packages/desktop/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY packages/ packages/
 COPY skills/ skills/
 
-# Copy built frontend
-COPY --from=frontend /app/desktop/out/ desktop/out/
-COPY --from=frontend /app/desktop/node_modules/ desktop/node_modules/
-COPY --from=frontend /app/desktop/package.json desktop/
-COPY desktop/src/main/ desktop/src/main/
+# Build all packages
+RUN pnpm build
 
-# Ports: 3001 (Node.js UI), 19836 (Python API)
-EXPOSE 3001 19836
+# ── Production Stage ───────────────────────────────────
+FROM node:20-slim
 
-# Start: Python backend + Node.js server
-CMD uv run openags serve --port 19836 & \
-    cd desktop && node out/main/index.js --serve
+# System deps for node-pty
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git curl python3 make g++ && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy built artifacts
+COPY --from=builder /app/package.json /app/pnpm-workspace.yaml /app/turbo.json ./
+COPY --from=builder /app/packages/app/package.json packages/app/
+COPY --from=builder /app/packages/app/dist packages/app/dist/
+COPY --from=builder /app/packages/desktop/package.json packages/desktop/
+COPY --from=builder /app/packages/desktop/out packages/desktop/out/
+
+# Copy skills (language-agnostic)
+COPY skills/ skills/
+
+# Install production dependencies only
+RUN pnpm install --prod --frozen-lockfile
+
+# Expose port
+EXPOSE 3001
+
+# Default environment
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Start server
+CMD ["node", "packages/app/dist/index.js"]
