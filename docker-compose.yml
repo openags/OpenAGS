@@ -4,14 +4,12 @@ services:
   openags:
     build: .
     ports:
-      - "3001:3001"    # UI (browser)
-      - "19836:19836"  # API (optional, for direct access)
+      - "19836:19836"
     volumes:
-      - ~/.openags:/root/.openags          # persist projects + config
+      - ~/.openags:/root/.openags
     environment:
       - OPENAGS_HOST=0.0.0.0
-      - OPENAGS_PORT=19836
-      - SERVER_PORT=3001
+      - SERVER_PORT=19836
     env_file:
-      - .env   # optional, for API keys
+      - .env
     restart: unless-stopped

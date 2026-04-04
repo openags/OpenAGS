@@ -2,101 +2,101 @@
 
 ## Project Overview
 
-OpenAGS (Open Autonomous Generalist Scientist) is an autonomous research framework that covers the full scientific workflow: literature review, proposal, experiments, manuscript writing, and peer review. It supports multiple Agent backends (Claude Code, Codex, Copilot CLI, built-in litellm agent) and runs as CLI, web server, or Electron desktop app.
+OpenAGS (Open Autonomous Generalist Scientist) is an autonomous research framework that covers the full scientific workflow: literature review, proposal, experiments, manuscript writing, and peer review. It supports multiple CLI agent backends (Claude Code SDK, Codex SDK, Cursor CLI, Gemini CLI) and runs as a desktop app or standalone server.
 
 ## Architecture
 
-See `docs/02_architecture_design.md` for the full architecture document.
-
-### Layered Architecture (strict dependency direction: top → bottom)
+TypeScript monorepo with two main packages:
 
 ```
-Layer 4: API Gateway     → openags/server/
-Layer 3: Application     → openags/core/ (orchestrator, project, session)
-Layer 2: Domain          → openags/agents/, openags/skills/
-Layer 1: Infrastructure  → openags/backend/, openags/tools/, openags/messaging/, openags/experiment/, openags/logging/
-Layer 0: External        → LLM APIs, arXiv, Docker, SSH, OS
-```
+packages/
+├── app/                # @openags/app — Server + research tools
+│   └── src/
+│       ├── server.ts       # Express + WebSocket server
+│       ├── schemas.ts      # Zod schemas (data validation)
+│       ├── providers/      # CLI agent integrations
+│       ├── research/       # Project management, tools
+│       ├── routes/         # REST API endpoints
+│       ├── workflow/       # Workflow orchestration
+│       └── messaging/      # Telegram, Discord, Feishu
+│
+└── desktop/            # @openags/desktop — Electron + React UI
+    └── src/
+        ├── main/           # Electron shell
+        ├── renderer/       # React SPA
+        └── preload/
 
-**Rules**:
-- Never import from a higher layer. Layer 1 must NOT import from Layer 2/3/4.
-- All cross-module data passes through `openags/models.py` (Pydantic models).
-- Layer 2 defines Protocols (interfaces). Layer 1 provides implementations.
+cli/                    # Future: openags-cli (Rust)
+skills/                 # SOUL.md / SKILL.md files (language-agnostic)
+```
 
 ### Key Files
 
-- `openags/models.py` — All Pydantic data models (single source of truth)
-- `openags/core/config.py` — Configuration loading (YAML + env vars)
-- `openags/core/orchestrator.py` — Central orchestrator (request → agent → result)
-- `openags/backend/protocol.py` — Backend Protocol (interface all backends implement)
-- `openags/agents/base.py` — BaseAgent class
-- `openags/main.py` — CLI entry point (typer)
-- `openags/server/app.py` — FastAPI application factory
+- `packages/app/src/schemas.ts` — Zod schemas (single source of truth for types)
+- `packages/app/src/server.ts` — Express + WebSocket server
+- `packages/app/src/config.ts` — YAML config loading
+- `packages/app/src/errors.ts` — Error class hierarchy
+- `packages/app/src/research/project.ts` — Project CRUD
+- `packages/app/src/providers/*.ts` — CLI agent integrations
 
 ## Code Standards
 
-### Python
+### TypeScript
 
-- **Python >= 3.11** required
+- **Node.js >= 20** required
+- **ESM modules** — use `.js` extension in imports
 - **Type hints everywhere** — all function signatures, all variables where non-obvious
-- **Pydantic v2** for all data structures that cross module boundaries
-- **`from __future__ import annotations`** at top of every file
-- **ruff** for formatting and linting
-- **mypy --strict** for type checking
+- **Zod** for all data structures that cross module boundaries
+- **ESLint + Prettier** for formatting and linting
 
 ### Naming
 
-- Files: `snake_case.py`
+- Files: `kebab-case.ts`
 - Classes: `PascalCase`
-- Functions/methods: `snake_case`
+- Functions/methods: `camelCase`
 - Constants: `UPPER_SNAKE_CASE`
 - Private: prefix with `_` (single underscore)
 
 ### Imports
 
-```python
-# Standard library
-from __future__ import annotations
-import asyncio
-from pathlib import Path
+```typescript
+// Node.js built-ins
+import * as fs from 'fs'
+import * as path from 'path'
 
-# Third-party
-from pydantic import BaseModel
-from fastapi import APIRouter
+// Third-party
+import express from 'express'
+import { z } from 'zod'
 
-# Local — always use absolute imports
-from openags.models import Project, AgentRole
-from openags.core.config import load_config
+// Local — always use .js extension for ESM
+import { ProjectSchema } from './schemas.js'
+import { loadConfig } from './config.js'
 ```
 
 ## Security Rules
 
-1. **API keys**: Always use `SecretStr` in Pydantic models. Never log or print raw keys.
-2. **File paths**: Validate all user-provided paths are within `workspace_dir`. Use `Path.resolve()` and check prefix.
-3. **Project IDs**: Must match `^[a-z0-9][a-z0-9_-]{1,62}[a-z0-9]$`. Enforced by Pydantic.
-4. **Shell commands**: Never construct commands from LLM output via string concatenation. Use `subprocess` with argument lists.
-5. **Config files**: Write with `chmod 0o600` (user-only read/write).
+1. **API keys**: Never log or print raw keys. Redact in config endpoints.
+2. **File paths**: Validate all user-provided paths are within `workspace_dir`. Use `path.resolve()` and check prefix.
+3. **Project IDs**: Must match `^[a-z0-9][a-z0-9_-]{1,62}[a-z0-9]$`. Enforced by Zod.
+4. **Shell commands**: Never construct commands from LLM output via string concatenation. Use argument arrays.
+5. **Config files**: Write with `mode: 0o600` (user-only read/write).
 6. **Docker sandbox**: Always use `--network=none` and `--memory` limits.
 7. **CORS**: Only allow localhost origins.
 8. **WebSocket**: Bind to `127.0.0.1` only.
 
 ## Error Handling
 
-- All custom exceptions inherit from `OpenAGSError` (defined in `openags/core/errors.py`)
-- Layer 1: Catch external exceptions → raise `OpenAGSError` subclass
-- Layer 2: Only raise `OpenAGSError` subclasses
-- Layer 3: Catch and decide: retry / fallback / propagate
-- Layer 4: Convert to HTTP status code + JSON error body
-- **Never use bare `except:`** — always catch specific exceptions
+- All custom exceptions extend `OpenAGSError` (in `errors.ts`)
+- HTTP routes: Convert errors to status code + JSON body
+- **Never use bare `catch`** — always catch specific types or rethrow
 - All external calls (LLM, API, subprocess) must have timeouts
 
 ## Testing
 
-- **Framework**: pytest + pytest-asyncio
-- **Mock Backend**: Use `MockBackend` from `tests/conftest.py` — never call real LLM in unit tests
-- **Temp projects**: Use `tmp_path` fixture for project directories
-- **Naming**: `test_{module}/test_{feature}.py::test_{scenario}`
-- Run: `uv run pytest tests/ -v`
+- **Framework**: Vitest
+- **Temp projects**: Use `tmp` fixture for directories
+- **Naming**: `*.test.ts`
+- Run: `pnpm test`
 
 ## Git Workflow
 
@@ -108,33 +108,27 @@ from openags.core.config import load_config
 
 ```bash
 # Development
-uv sync                          # Install dependencies
-uv run openags --help            # CLI help
-uv run openags init my-project   # Create project
-uv run openags chat -p my-project # Interactive chat
-uv run openags serve             # Start API server
+pnpm install                              # Install dependencies
+pnpm --filter @openags/app dev            # Server dev mode
+pnpm --filter @openags/desktop dev        # Desktop dev mode
 
-# Testing
-uv run pytest tests/ -v          # Run all tests
-uv run pytest tests/test_core/ -v # Run core tests only
+# Building
+pnpm build                                # Build all packages
 
 # Linting
-uv run ruff check openags/       # Lint
-uv run ruff format openags/      # Format
-uv run mypy openags/ --strict    # Type check
+pnpm lint                                 # Lint all packages
+pnpm format                               # Format all packages
+pnpm typecheck                            # Type check
 
-# Desktop (when implemented)
-cd desktop && pnpm install && pnpm dev   # Dev mode
-cd desktop && pnpm build                 # Build
+# Testing
+pnpm test                                 # Run all tests
 ```
 
 ## Do NOT
 
-- Do not add dependencies without justification. Prefer stdlib when possible.
-- Do not use `os.system()` or `subprocess.run(shell=True)` with untrusted input.
+- Do not add dependencies without justification. Prefer Node.js built-ins when possible.
+- Do not use `child_process.exec()` with untrusted input.
 - Do not store secrets in code, git, or logs.
-- Do not import from higher architectural layers.
-- Do not create circular imports — if needed, move shared types to `models.py`.
-- Do not use `Any` type — use proper generics or `object`.
+- Do not use `any` type — use proper generics or `unknown`.
 - Do not add comments that restate the code. Only comment non-obvious logic.
 - Do not add unused parameters, imports, or dead code.

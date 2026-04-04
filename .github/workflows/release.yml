@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python (for node-gyp)
+      - name: Setup Python (for node-gyp native modules)
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -42,11 +42,13 @@ jobs:
           version: 9
 
       - name: Install dependencies
-        working-directory: desktop
         run: pnpm install --frozen-lockfile
 
-      - name: Build & Package
-        working-directory: desktop
+      - name: Build app package
+        run: pnpm --filter @openags/app build
+
+      - name: Build & Package desktop
+        working-directory: packages/desktop
         run: npx electron-vite build && npx electron-builder --${{ matrix.platform }} --publish never --config electron-builder.yml
 
       - name: Upload artifacts
@@ -54,11 +56,11 @@ jobs:
         with:
           name: desktop-${{ matrix.platform }}
           path: |
-            desktop/dist/*.dmg
-            desktop/dist/*.zip
-            desktop/dist/*.exe
-            desktop/dist/*.AppImage
-            desktop/dist/*.deb
+            packages/desktop/dist/*.dmg
+            packages/desktop/dist/*.zip
+            packages/desktop/dist/*.exe
+            packages/desktop/dist/*.AppImage
+            packages/desktop/dist/*.deb
           if-no-files-found: warn
 
   release:

@@ -1,0 +1,57 @@
+[package]
+name = "openags-cli"
+version = "0.1.0"
+edition = "2024"
+description = "OpenAGS CLI Agent - Autonomous Research Assistant"
+repository = "https://github.com/your-org/openags"
+license = "MIT"
+keywords = ["llm", "research", "ai", "agent", "cli"]
+categories = ["command-line-utilities", "science"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# CLI framework
+clap = { version = "4.0", features = ["derive"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# JSON
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Terminal UI
+crossterm = "0.28"
+ratatui = "0.29"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Config
+config = "0.14"
+dirs = "5.0"
+
+# Git
+git2 = "0.19"
+
+# Utilities
+uuid = { version = "1.0", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3.0"
+
+[[bin]]
+name = "openags"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
