@@ -13,6 +13,7 @@ import {
   SearchCheck,
   Library,
   Send,
+  MessageSquareReply,
   Zap,
   Settings as SettingsIcon,
   User,
@@ -59,6 +60,7 @@ const WORKFLOW_SECTIONS = [
   { key: 'review', icon: SearchCheck, label: 'Review' },
   { key: 'references', icon: Library, label: 'References' },
   { key: 'submit', icon: Send, label: 'Submit' },
+  { key: 'rebuttal', icon: MessageSquareReply, label: 'Rebuttal' },
   { key: 'ags', icon: Bot, label: 'Auto' },
 ]
 
@@ -74,6 +76,7 @@ const MODULE_ICONS: Record<string, typeof MessageSquare> = {
   review: SearchCheck,
   references: Library,
   submit: Send,
+  rebuttal: MessageSquareReply,
 }
 
 const NON_CHAT_SECTIONS = new Set(['references', 'submit', 'config'])

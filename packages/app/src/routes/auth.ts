@@ -38,7 +38,15 @@ function loadUsers(filePath: string): UsersDB {
   }
   try {
     const raw = fs.readFileSync(filePath, 'utf-8')
-    return JSON.parse(raw) as UsersDB
+    const parsed = JSON.parse(raw) as unknown
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      Array.isArray((parsed as { users?: unknown }).users)
+    ) {
+      return parsed as UsersDB
+    }
+    return { users: [] }
   } catch {
     return { users: [] }
   }

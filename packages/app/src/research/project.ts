@@ -17,6 +17,29 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 /**
+ * Resolve a project's workspace directory, checking both the default
+ * `{workspace}/projects/{id}/` location and the external index for
+ * projects created with a custom workspace_dir.
+ */
+export function resolveProjectWorkspace(workspaceDirRoot: string, projectId: string): string | null {
+  const indexPath = path.join(workspaceDirRoot, 'projects_index.yaml')
+  if (fs.existsSync(indexPath)) {
+    try {
+      const data = yaml.load(fs.readFileSync(indexPath, 'utf-8')) as Record<string, string> | null
+      const ext = data?.[projectId]
+      if (ext && fs.existsSync(path.join(ext, '.openags', 'meta.yaml'))) {
+        return ext
+      }
+    } catch { /* fall through to default */ }
+  }
+  const defaultDir = path.join(workspaceDirRoot, 'projects', projectId)
+  if (fs.existsSync(path.join(defaultDir, '.openags', 'meta.yaml'))) {
+    return defaultDir
+  }
+  return null
+}
+
+/**
  * Discover agent modules in a project directory.
  * A subdirectory is a module if it contains SOUL.md, sessions/, or memory.md.
  */
@@ -158,6 +181,20 @@ export class ProjectManager {
     if (fs.existsSync(path.join(projectDir, '.openags', 'meta.yaml'))) {
       throw new ProjectError(`Project '${projectId}' already exists at ${projectDir}`)
     }
+    const defaultDir = path.join(this.baseDir, projectId)
+    if (
+      defaultDir !== projectDir &&
+      fs.existsSync(path.join(defaultDir, '.openags', 'meta.yaml'))
+    ) {
+      throw new ProjectError(
+        `Project ID '${projectId}' is already in use at ${defaultDir}. Pick a different name or remove the existing project.`,
+      )
+    }
+    if (this.external[projectId] && this.external[projectId] !== projectDir) {
+      throw new ProjectError(
+        `Project ID '${projectId}' is already registered at ${this.external[projectId]}. Pick a different name.`,
+      )
+    }
 
     const now = new Date().toISOString()
     const project: Project = {
@@ -198,13 +235,13 @@ export class ProjectManager {
   }
 
   private resolveProjectDir(projectId: string): string | null {
-    const defaultDir = path.join(this.baseDir, projectId)
-    if (fs.existsSync(path.join(defaultDir, '.openags', 'meta.yaml'))) {
-      return defaultDir
-    }
     const extPath = this.external[projectId]
     if (extPath && fs.existsSync(path.join(extPath, '.openags', 'meta.yaml'))) {
       return extPath
+    }
+    const defaultDir = path.join(this.baseDir, projectId)
+    if (fs.existsSync(path.join(defaultDir, '.openags', 'meta.yaml'))) {
+      return defaultDir
     }
     return null
   }

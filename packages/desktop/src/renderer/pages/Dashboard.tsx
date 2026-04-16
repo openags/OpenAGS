@@ -85,8 +85,13 @@ export default function Dashboard(): React.ReactElement {
   }, [])
 
   const handleCreate = async () => {
+    let values: { name: string; description?: string; workspace_dir?: string }
     try {
-      const values = await form.validateFields()
+      values = await form.validateFields()
+    } catch {
+      return
+    }
+    try {
       await api.post('/api/projects/', {
         name: values.name,
         description: values.description || '',
@@ -94,9 +99,11 @@ export default function Dashboard(): React.ReactElement {
       })
       setModalOpen(false)
       form.resetFields()
-      fetchProjects()
-    } catch {
-      /* validation */
+      await fetchProjects()
+      message.success(`Created "${values.name}"`)
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : 'Unknown error'
+      message.error(`Failed to create project: ${detail}`)
     }
   }
 

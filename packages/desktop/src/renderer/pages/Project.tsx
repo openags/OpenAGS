@@ -13,6 +13,7 @@ import {
   Library,
   Lightbulb,
   MessageSquare,
+  MessageSquareReply,
   Paperclip,
   Search,
   SearchCheck,
@@ -29,6 +30,7 @@ import ManuscriptEditor from '../components/ManuscriptEditor'
 import ProposalEditor from '../components/ProposalEditor'
 import ProjectConfig from '../components/ProjectConfig'
 import ReferencesManager from '../components/ReferencesManager'
+import SubmitPanel from '../components/SubmitPanel'
 import AgentConfigPanel from '../components/AgentConfigPanel'
 import TerminalPanel from '../components/TerminalPanel'
 import AGSDashboard from '../components/AGSDashboard'
@@ -62,6 +64,7 @@ const SECTION_FOLDERS: Record<string, string> = {
   experiments: 'experiments',
   manuscript: 'manuscript',
   review: 'review',
+  rebuttal: 'rebuttal',
 }
 
 /** Markdown renderer: headers, bold, inline code, code blocks, tables, lists, tool status. */
@@ -391,6 +394,15 @@ const SECTION_META: Record<string, SectionMeta> = {
     chatEnabled: true,
     agentRole: 'reviewer',
     agentLabel: 'Reviewer Agent',
+  },
+  rebuttal: {
+    Icon: MessageSquareReply,
+    title: 'Rebuttal',
+    description: 'Draft responses to peer-review comments.',
+    color: '#d946ef',
+    chatEnabled: true,
+    agentRole: 'rebuttal',
+    agentLabel: 'Rebuttal Agent',
   },
   references: {
     Icon: Library,
@@ -1593,6 +1605,8 @@ export default function Project(): React.ReactElement {
         <div style={{ flex: 1, overflow: 'auto' }}>
           <ReferencesManager projectId={id} />
         </div>
+      ) : activeSection === 'submit' && project ? (
+        <SubmitPanel projectId={project.id} projectName={project.name} />
       ) : !meta.chatEnabled ? (
         <div style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
           <SectionPlaceholder section={activeSection} />

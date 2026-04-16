@@ -1,6 +1,6 @@
 {
   "name": "@openags/app",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "OpenAGS Application Server",
   "type": "module",
   "main": "./dist/index.js",
@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@types/archiver": "^7.0.0",
     "@types/cross-spawn": "^6.0.6",
     "@types/dockerode": "^3.3.31",
     "@types/express": "^5.0.0",

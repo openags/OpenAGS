@@ -11,6 +11,8 @@ import * as path from 'path'
 import * as os from 'os'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import archiver from 'archiver'
+import { resolveProjectWorkspace } from '../research/project.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -66,11 +68,11 @@ function buildTree(dir: string, relativeTo: string): FileEntry[] {
 
 export function createManuscriptRoutes(workspaceDir?: string): Router {
   const router = Router()
-  const baseDir = path.join(workspaceDir || path.join(os.homedir(), '.openags'), 'projects')
+  const workspaceRoot = workspaceDir || path.join(os.homedir(), '.openags')
 
   function resolveModuleDir(projectId: string, module: string): string | null {
-    const projectDir = path.join(baseDir, projectId)
-    if (!fs.existsSync(path.join(projectDir, '.openags', 'meta.yaml'))) return null
+    const projectDir = resolveProjectWorkspace(workspaceRoot, projectId)
+    if (!projectDir) return null
     const moduleDir = path.join(projectDir, module)
     if (!fs.existsSync(moduleDir)) {
       fs.mkdirSync(moduleDir, { recursive: true })
@@ -252,10 +254,11 @@ export function createManuscriptRoutes(workspaceDir?: string): Router {
     }
   })
 
-  // Serve PDF file
+  // Serve PDF file (inline by default, attachment when ?download=1)
   router.get('/manuscript/:projectId/pdf/:pdfPath', (req: Request, res: Response) => {
     const module = (req.query.module as string) || 'manuscript'
     const pdfPath = param(req.params.pdfPath)
+    const download = req.query.download === '1' || req.query.download === 'true'
 
     const dir = resolveModuleDir(param(req.params.projectId), module)
     if (!dir) { res.status(404).json({ error: 'Module not found' }); return }
@@ -265,9 +268,69 @@ export function createManuscriptRoutes(workspaceDir?: string): Router {
 
     if (!fs.existsSync(fullPath)) { res.status(404).json({ error: 'PDF not found' }); return }
 
+    const downloadName = download
+      ? `${param(req.params.projectId)}-${module}.pdf`
+      : pdfPath
+    const disposition = download ? 'attachment' : 'inline'
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `inline; filename="${pdfPath}"`)
+    res.setHeader('Content-Disposition', `${disposition}; filename="${downloadName}"`)
     fs.createReadStream(fullPath).pipe(res)
+  })
+
+  // Export module as a ZIP (LaTeX source + optional compiled PDF, excludes aux + agent files)
+  router.get('/manuscript/:projectId/export', (req: Request, res: Response) => {
+    const module = (req.query.module as string) || 'manuscript'
+    const includePdf = req.query.include_pdf !== 'false' && req.query.include_pdf !== '0'
+
+    const dir = resolveModuleDir(param(req.params.projectId), module)
+    if (!dir) { res.status(404).json({ error: 'Module not found' }); return }
+
+    // Patterns to skip — LaTeX aux files + agent internals
+    const SKIP_FILES = new Set([
+      'SOUL.md', 'STATUS.md', 'TASKS.md', 'memory.md',
+    ])
+    const SKIP_DIRS = new Set(['sessions', 'skills', '.openags'])
+    const AUX_EXTENSIONS = new Set([
+      '.aux', '.log', '.out', '.toc', '.bbl', '.blg', '.synctex.gz',
+      '.fdb_latexmk', '.fls', '.lof', '.lot', '.idx', '.ind', '.ilg', '.nav', '.snm',
+    ])
+    const isAuxFile = (name: string): boolean => {
+      const lower = name.toLowerCase()
+      if (lower.endsWith('.synctex.gz')) return true
+      const ext = path.extname(lower)
+      return AUX_EXTENSIONS.has(ext)
+    }
+
+    const fileName = `${param(req.params.projectId)}-${module}.zip`
+    res.setHeader('Content-Type', 'application/zip')
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
+
+    const archive = archiver('zip', { zlib: { level: 9 } })
+    archive.on('error', (err) => {
+      if (!res.headersSent) {
+        res.status(500).json({ error: err.message }); return
+      }
+      res.end()
+    })
+    archive.pipe(res)
+
+    const walk = (currentDir: string, archivePrefix: string): void => {
+      for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+        const name = entry.name
+        if (entry.isDirectory()) {
+          if (SKIP_DIRS.has(name) || name.startsWith('.')) continue
+          walk(path.join(currentDir, name), path.join(archivePrefix, name))
+        } else {
+          if (SKIP_FILES.has(name)) continue
+          if (isAuxFile(name)) continue
+          if (!includePdf && name.toLowerCase().endsWith('.pdf')) continue
+          archive.file(path.join(currentDir, name), { name: path.join(archivePrefix, name) })
+        }
+      }
+    }
+
+    walk(dir, module)
+    void archive.finalize()
   })
 
   // SyncTeX: PDF position → LaTeX source position
