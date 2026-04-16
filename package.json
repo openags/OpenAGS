@@ -1,6 +1,6 @@
 {
   "name": "openags",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Open Autonomous Generalist Scientist — autonomous research agent framework",
   "private": true,
   "type": "module",
