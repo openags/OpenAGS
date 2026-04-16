@@ -1556,13 +1556,7 @@ export default function Project(): React.ReactElement {
                       />
                       {/* File attachment */}
                       <input type="file" ref={cliFileInputRef} style={{ display: 'none' }} multiple
-                        onChange={(e) => {
-                          if (e.target.files) {
-                            const newFiles = Array.from(e.target.files).map(f => ({ file: f, name: f.name }))
-                            setCliAttachedFiles(prev => [...prev, ...newFiles])
-                          }
-                          e.target.value = ''
-                        }}
+                        onChange={handleCliFileSelect}
                       />
                       <button type="button" onClick={() => cliFileInputRef.current?.click()} title="Attach file"
                         style={{

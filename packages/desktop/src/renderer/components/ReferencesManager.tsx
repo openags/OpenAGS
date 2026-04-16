@@ -520,7 +520,7 @@ export default function ReferencesManager({ projectId }: Props): React.ReactElem
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 4, marginLeft: 8, flexShrink: 0 }}>
-                    {ref.pdf_path && <FileText size={14} color="#4f6ef7" title="Has PDF" />}
+                    {ref.pdf_path && <span title="Has PDF" style={{ display: 'inline-flex' }}><FileText size={14} color="#4f6ef7" /></span>}
                     {ref.doi && <span style={{ fontSize: 10, color: '#8b95a5', background: '#f0f2f5', borderRadius: 4, padding: '1px 5px' }}>DOI</span>}
                     {ref.arxiv_id && <span style={{ fontSize: 10, color: '#8b95a5', background: '#f0f2f5', borderRadius: 4, padding: '1px 5px' }}>arXiv</span>}
                   </div>
