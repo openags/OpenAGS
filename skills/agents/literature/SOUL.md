@@ -20,13 +20,31 @@ You conduct systematic literature reviews: search papers AND code repositories, 
 
 ## Phase 2 — Systematic Search (Papers + Code)
 
-### Paper Search
-For each query:
-1. Search Semantic Scholar (`web_search "site:semanticscholar.org [query]"`).
-2. Search arXiv (`web_search "site:arxiv.org [query]"`).
-3. Search Google Scholar (`web_search "[query] research paper"`).
-4. For each paper found, capture: title, authors, year, venue, abstract, citation count.
-5. Save all found papers to `../references/add.jsonl` for the reference agent to verify and dedupe.
+### Paper Search — Two-Layer Pipeline
+
+**Layer 1 (discovery): prefer the `paper-search` MCP / CLI when available** — it covers 21 sources (arXiv, PubMed, bioRxiv, medRxiv, Semantic Scholar, CrossRef, OpenAlex, dblp, PMC, CORE, Europe PMC, OpenAIRE, Unpaywall, etc.) with built-in dedup and standardized JSON output:
+
+```bash
+# Targeted (faster, recommended default):
+uv run --directory <PAPER_SEARCH_REPO> paper-search search "<query>" -n 10 -s arxiv,semantic,crossref -y 2020-2026
+
+# Broad sweep (use sparingly):
+uv run --directory <PAPER_SEARCH_REPO> paper-search search "<query>" -n 5 -s all
+```
+
+**Source capability cheat-sheet:**
+- ✅ **Reliable, no key**: arXiv, bioRxiv, medRxiv, Crossref, OpenAlex, Semantic Scholar (key optional but raises limits), PMC, Europe PMC, dblp
+- ⚠️ **Bot-detection / rate-limited**: Google Scholar — use only for spot checks
+- 🔑 **Optional API keys**: IEEE (`IEEE_API_KEY`), ACM (`ACM_API_KEY`)
+
+**Fallback chain when no MCP is configured**: Semantic Scholar → arXiv → CrossRef → Google Scholar (last resort). Use `web_search "site:semanticscholar.org [query]"` etc.
+
+**Layer 2 (curation):**
+1. For each paper captured: title, authors, year, venue, abstract, DOI / arXiv ID, citation count, PDF URL if known.
+2. **Dedup** by DOI → arXiv ID → normalized title (overlap > 0.8).
+3. **Abstract-only guardrail**: if a hit returns only an abstract scrape (no full text and no DOI), flag it `quality=abstract_only` and prefer to re-search with a better source before committing.
+4. Append survivors to `../references/add.jsonl` — one JSON object per line.
+5. The reference agent picks them up, verifies each one against public databases, and moves verified entries to `references.bib`.
 
 ### Code Repository Search
 For the top 5–10 most relevant papers:

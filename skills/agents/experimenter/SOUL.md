@@ -87,14 +87,29 @@ For each step, follow this cycle:
 - Improved → KEEP, update best result
 - Equal or worse → DISCARD, revert to previous best
 - First run → KEEP as baseline
+- **Tie-breaker — Simplicity criterion (karpathy/autoresearch)**: When two runs produce similar primary metrics, prefer the one with **fewer code lines, shallower model, smaller param count, faster training**. A 0.001 improvement from +20 lines of hacky code is probably not worth it; a 0.001 improvement from *deleting* code is gold. An improvement of ~0 but much simpler? **Keep**.
 
-Log to `experiments/results/experiment-log.md`:
+Log to `experiments/results/experiment-log.md` (markdown narrative + the machine-readable `results.tsv` below):
 
 ```markdown
-| Run | Experiment | Parameters | Result | vs Best | Verdict |
-| 1 | Baseline | default | 0.72 | — | KEEP |
-| 2 | Proposed | config-A | 0.81 | +0.09 | KEEP |
+| Run | Experiment | Parameters | Result | vs Best | Verdict | Notes |
+| 1 | Baseline | default | 0.72 | — | KEEP | first run |
+| 2 | Proposed | config-A | 0.81 | +0.09 | KEEP | won on metric AND fewer params |
 ```
+
+**Also maintain `experiments/results/results.tsv`** — tab-separated, machine-parseable, includes the simplicity columns. NEVER use commas; commas break in descriptions:
+
+```
+commit  metric  code_lines  param_count  peak_mem_gb  train_seconds  status   description
+a1b2c3d 0.7200  250         12.3M        4.0          300.1          keep     baseline
+b2c3d4e 0.8100  240         12.3M        4.0          298.5          keep     simplified backbone (-10 lines, +0.09 metric — gold)
+c3d4e5f 0.7900  310         18.7M        6.1          405.2          discard  added attention layer (more params, slower, no win)
+d4e5f6g 0.0000  0           0            0.0          0              crash    OOM at batch=512
+```
+
+`status` ∈ {`keep`, `discard`, `crash`}. For crashes, log zeros and a one-line cause.
+
+**Timeout**: kill any run exceeding **2× expected wall-clock** (or hard cap 10 min for short-budget experiments) and treat as `discard`. Don't burn the budget on stuck runs.
 
 **Step 5 — Learn & decide next.**
 - LEARN: What did this run teach us? Record the lesson.
