@@ -1,6 +1,6 @@
 {
   "name": "@openags/app",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "OpenAGS Application Server",
   "type": "module",
   "main": "./dist/index.js",
