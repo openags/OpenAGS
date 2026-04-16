@@ -9,7 +9,6 @@ import {
   EyeOff,
   CheckCircle2,
   Terminal,
-  Cpu,
   Bot,
   Sparkles,
   Globe,

@@ -14,9 +14,9 @@ import {
   ChevronRight, ChevronDown, FileText, Folder, FolderOpen,
   Plus, FolderPlus, RefreshCw, Save, Play, Eye, EyeOff,
   Trash2, Pencil, PanelLeftClose, PanelLeftOpen, Clock,
-  Download, MessageSquare, X, File,
+  Download, X, File,
 } from 'lucide-react'
-import { api, BASE_URL } from '../services/api'
+import { api } from '../services/api'
 import { useLocale } from '../services/i18n'
 
 // ── Types ────────────────────────────────────────────

@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Clock, Tag, RotateCcw, ChevronDown, ChevronRight,
-  Plus, X, FileDiff, Check,
+  X, FileDiff, Check,
 } from 'lucide-react'
 import { api } from '../services/api'
 

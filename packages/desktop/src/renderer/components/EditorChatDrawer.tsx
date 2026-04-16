@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { MessageSquare, Send, ChevronDown, ChevronUp, X, Sparkles } from 'lucide-react'
+import { Send, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -20,7 +20,7 @@ interface Props {
   cwd: string
 }
 
-export default function EditorChatDrawer({ projectId, module, activeFile, cwd }: Props): React.ReactElement {
+export default function EditorChatDrawer({ projectId: _projectId, module, activeFile, cwd }: Props): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false)
   const [height, setHeight] = useState(280)
   const [messages, setMessages] = useState<ChatMessage[]>([])

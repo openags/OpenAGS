@@ -8,6 +8,7 @@
 import { spawn } from 'child_process'
 import * as path from 'path'
 import * as fs from 'fs'
+import * as os from 'os'
 import { WsWriter } from './types'
 
 const activeSessions = new Map<string, { proc: ReturnType<typeof spawn> }>()
@@ -92,7 +93,7 @@ export async function queryCopilot(
   writer: WsWriter,
 ): Promise<void> {
   // Write helper script to temp file
-  const tmpScript = path.join(require('os').tmpdir(), 'openags-copilot-helper.js')
+  const tmpScript = path.join(os.tmpdir(), 'openags-copilot-helper.js')
   fs.writeFileSync(tmpScript, getHelperScript(), 'utf-8')
 
   const args = [
@@ -106,21 +107,6 @@ export async function queryCopilot(
   return new Promise((resolve) => {
     // Use system Node.js (not Electron's) — Electron's Node lacks node:sqlite
     const nodePath = process.env.NODE_PATH_OVERRIDE || 'node'
-
-    // Resolve the monorepo root node_modules for pnpm hoisting
-    let modulesPath = path.join(__dirname, '..', '..', 'node_modules')
-    // Walk up to find the root node_modules with @github/copilot-sdk
-    let searchDir = __dirname
-    for (let i = 0; i < 10; i++) {
-      const candidate = path.join(searchDir, 'node_modules', '@github', 'copilot-sdk')
-      if (fs.existsSync(candidate)) {
-        modulesPath = path.join(searchDir, 'node_modules')
-        break
-      }
-      const parent = path.dirname(searchDir)
-      if (parent === searchDir) break
-      searchDir = parent
-    }
 
     const proc = spawn(nodePath, args, {
       cwd: options.cwd || process.cwd(),
