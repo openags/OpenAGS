@@ -21,7 +21,7 @@ English | [中文](docs/i18n/README_ZH.md) | [日本語](docs/i18n/README_JA.md)
 OpenAGS orchestrates a team of AI agents that collaborate across the full research lifecycle — literature review, hypothesis generation, experiments, manuscript writing, and peer review. One framework, end-to-end, fully autonomous.
 
 <div align="center">
-  <img src="docs/images/OpenAGS-Desktop1.jpg" alt="OpenAGS Desktop">
+  <img src="docs/images/OpenAGS.png" alt="OpenAGS Desktop">
   <br>
   <sub>OpenAGS Desktop — Multi-agent research workspace with integrated LaTeX editor</sub>
 </div>
@@ -247,7 +247,7 @@ cargo build --release
 
 <div align="center">
 
-[![Star History Chart](https://api.star-history.com/svg?repos=openags/OpenAGS&type=Date)](https://star-history.com/#openags/OpenAGS&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=openags/auto-research&type=Date)](https://star-history.com/#openags/auto-research&Date)
 
 </div>
 
