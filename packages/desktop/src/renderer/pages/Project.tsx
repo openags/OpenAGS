@@ -15,6 +15,7 @@ import {
   MessageSquare,
   MessageSquareReply,
   Paperclip,
+  Presentation as PresentationIcon,
   Search,
   SearchCheck,
   Send,
@@ -31,6 +32,7 @@ import ProposalEditor from '../components/ProposalEditor'
 import ProjectConfig from '../components/ProjectConfig'
 import ReferencesManager from '../components/ReferencesManager'
 import SubmitPanel from '../components/SubmitPanel'
+import PresentationPanel from '../components/PresentationPanel'
 import AgentConfigPanel from '../components/AgentConfigPanel'
 import TerminalPanel from '../components/TerminalPanel'
 import AGSDashboard from '../components/AGSDashboard'
@@ -65,6 +67,7 @@ const SECTION_FOLDERS: Record<string, string> = {
   manuscript: 'manuscript',
   review: 'review',
   rebuttal: 'rebuttal',
+  presentation: 'presentation',
 }
 
 /** Markdown renderer: headers, bold, inline code, code blocks, tables, lists, tool status. */
@@ -416,6 +419,13 @@ const SECTION_META: Record<string, SectionMeta> = {
     title: 'Submit',
     description: 'Prepare and submit for publication.',
     color: '#14b8a6',
+    chatEnabled: false,
+  },
+  presentation: {
+    Icon: PresentationIcon,
+    title: 'Presentation',
+    description: 'Author slides and record a narrated video.',
+    color: '#ec4899',
     chatEnabled: false,
   },
   config: {
@@ -1601,6 +1611,8 @@ export default function Project(): React.ReactElement {
         </div>
       ) : activeSection === 'submit' && project ? (
         <SubmitPanel projectId={project.id} projectName={project.name} />
+      ) : activeSection === 'presentation' && project ? (
+        <PresentationPanel projectId={project.id} projectName={project.name} />
       ) : !meta.chatEnabled ? (
         <div style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
           <SectionPlaceholder section={activeSection} />

@@ -14,6 +14,7 @@ import {
   Library,
   Send,
   MessageSquareReply,
+  Presentation,
   Zap,
   Settings as SettingsIcon,
   User,
@@ -50,21 +51,31 @@ interface ProjectItem {
   stage: string
 }
 
-// Fixed workflow sections in display order
-const WORKFLOW_SECTIONS = [
+// Fixed workflow sections in display order.
+// A `divider: true` item renders a thin horizontal rule between groups.
+type WorkflowEntry =
+  | { key: string; icon: typeof MessageSquare; label: string }
+  | { divider: true; id: string }
+
+const WORKFLOW_SECTIONS: WorkflowEntry[] = [
   { key: 'pi', icon: GraduationCap, label: 'PI' },
   { key: 'literature', icon: BookOpen, label: 'Literature Review' },
   { key: 'proposal', icon: Lightbulb, label: 'Proposal' },
   { key: 'experiments', icon: FlaskConical, label: 'Experiments' },
   { key: 'manuscript', icon: FileText, label: 'Manuscript' },
-  { key: 'review', icon: SearchCheck, label: 'Review' },
   { key: 'references', icon: Library, label: 'References' },
+  { key: 'review', icon: SearchCheck, label: 'Review' },
+  { divider: true, id: 'after-review' },
   { key: 'submit', icon: Send, label: 'Submit' },
   { key: 'rebuttal', icon: MessageSquareReply, label: 'Rebuttal' },
+  { key: 'presentation', icon: Presentation, label: 'Presentation' },
+  { divider: true, id: 'before-auto' },
   { key: 'ags', icon: Bot, label: 'Auto' },
 ]
 
-const WORKFLOW_KEYS = new Set(WORKFLOW_SECTIONS.map((s) => s.key))
+const WORKFLOW_KEYS = new Set(
+  WORKFLOW_SECTIONS.filter((s): s is Extract<WorkflowEntry, { key: string }> => 'key' in s).map((s) => s.key),
+)
 
 const MODULE_ICONS: Record<string, typeof MessageSquare> = {
   ags: Bot,
@@ -76,10 +87,11 @@ const MODULE_ICONS: Record<string, typeof MessageSquare> = {
   review: SearchCheck,
   references: Library,
   submit: Send,
+  presentation: Presentation,
   rebuttal: MessageSquareReply,
 }
 
-const NON_CHAT_SECTIONS = new Set(['references', 'submit', 'config'])
+const NON_CHAT_SECTIONS = new Set(['references', 'submit', 'presentation', 'config'])
 
 type ContextMenuData =
   | { kind: 'project'; x: number; y: number; projectId: string }
@@ -575,7 +587,7 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
                       />
                       {expanded && (
                         <div>
-                          {[
+                          {([
                             ...WORKFLOW_SECTIONS,
                             // Append any custom modules not in the fixed workflow
                             ...(modulesByProject[p.id] || [])
@@ -585,7 +597,20 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
                                 icon: MODULE_ICONS[m.name] || FolderOpen,
                                 label: m.name.charAt(0).toUpperCase() + m.name.slice(1),
                               })),
-                          ].map((s) => {
+                          ] as WorkflowEntry[]).map((s) => {
+                            if ('divider' in s) {
+                              return (
+                                <div
+                                  key={`divider-${s.id}`}
+                                  style={{
+                                    height: 1,
+                                    background: 'var(--border)',
+                                    margin: '6px 14px',
+                                    opacity: 0.7,
+                                  }}
+                                />
+                              )
+                            }
                             const sectionActive = isSectionActive(p.id, s.key)
                             const Icon = s.icon
                             const sectionThreads = threadsByKey[getChatKey(p.id, s.key)] || []

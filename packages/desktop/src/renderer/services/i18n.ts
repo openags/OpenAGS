@@ -162,6 +162,7 @@ const en: Dict = {
     manuscript: 'Manuscript',
     review: 'Review',
     rebuttal: 'Rebuttal',
+    presentation: 'Presentation',
     references: 'References',
     config: 'Config',
     sendMessage: 'Send message',
@@ -306,6 +307,7 @@ const zh: Dict = {
     manuscript: '论文',
     review: '审稿',
     rebuttal: '答辩',
+    presentation: '演示',
     references: '引用',
     config: '配置',
     sendMessage: '发送消息',
@@ -417,7 +419,7 @@ const ja: Dict = {
   },
   project: {
     pi: 'PI', literature: '文献', proposal: '提案', experiments: '実験',
-    manuscript: '論文', review: '査読', rebuttal: 'リバッタル', references: '参考文献', config: '設定',
+    manuscript: '論文', review: '査読', rebuttal: 'リバッタル', presentation: 'プレゼン', references: '参考文献', config: '設定',
     sendMessage: 'メッセージを送信', enterToSend: 'Enterで送信', shiftEnter: 'Shift+Enterで改行',
     startConversation: '会話を開始', openTerminal: 'ターミナルを開く', closeTerminal: 'ターミナルを閉じる',
     attachFiles: 'ファイルを添付',
@@ -479,7 +481,7 @@ const fr: Dict = {
   },
   project: {
     pi: 'PI', literature: 'Littérature', proposal: 'Proposition', experiments: 'Expériences',
-    manuscript: 'Manuscrit', review: 'Évaluation', rebuttal: 'Réfutation', references: 'Références', config: 'Config',
+    manuscript: 'Manuscrit', review: 'Évaluation', rebuttal: 'Réfutation', presentation: 'Présentation', references: 'Références', config: 'Config',
     sendMessage: 'Envoyer', enterToSend: 'Entrée pour envoyer', shiftEnter: 'Shift+Entrée pour nouvelle ligne',
     startConversation: 'Démarrer une conversation', openTerminal: 'Ouvrir le terminal',
     closeTerminal: 'Fermer le terminal', attachFiles: 'Joindre des fichiers',
@@ -541,7 +543,7 @@ const de: Dict = {
   },
   project: {
     pi: 'PI', literature: 'Literatur', proposal: 'Vorschlag', experiments: 'Experimente',
-    manuscript: 'Manuskript', review: 'Begutachtung', rebuttal: 'Erwiderung', references: 'Referenzen', config: 'Konfiguration',
+    manuscript: 'Manuskript', review: 'Begutachtung', rebuttal: 'Erwiderung', presentation: 'Präsentation', references: 'Referenzen', config: 'Konfiguration',
     sendMessage: 'Nachricht senden', enterToSend: 'Enter zum Senden', shiftEnter: 'Shift+Enter für neue Zeile',
     startConversation: 'Gespräch beginnen', openTerminal: 'Terminal öffnen',
     closeTerminal: 'Terminal schließen', attachFiles: 'Dateien anhängen',
@@ -603,7 +605,7 @@ const ar: Dict = {
   },
   project: {
     pi: 'PI', literature: 'الأدبيات', proposal: 'المقترح', experiments: 'التجارب',
-    manuscript: 'المخطوطة', review: 'المراجعة', rebuttal: 'الرد', references: 'المراجع', config: 'التكوين',
+    manuscript: 'المخطوطة', review: 'المراجعة', rebuttal: 'الرد', presentation: 'العرض التقديمي', references: 'المراجع', config: 'التكوين',
     sendMessage: 'إرسال', enterToSend: 'Enter للإرسال', shiftEnter: 'Shift+Enter لسطر جديد',
     startConversation: 'بدء محادثة', openTerminal: 'فتح الطرفية',
     closeTerminal: 'إغلاق الطرفية', attachFiles: 'إرفاق ملفات',

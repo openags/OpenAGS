@@ -9,6 +9,7 @@ import {
   Play,
   RefreshCw,
   Send,
+  Trash2,
 } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -114,24 +115,65 @@ export default function SubmitPanel({ projectId, projectName }: SubmitPanelProps
     }
   }
 
-  const handleDownloadZip = (): void => {
-    const url = `/api/manuscript/${projectId}/export?module=${module}&include_pdf=true`
-    window.open(url, '_blank')
+  const downloadBlob = async (url: string, filename: string): Promise<void> => {
+    const token = window.localStorage.getItem('openags-auth-token')
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    const res = await fetch(url, { headers })
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+    const blob = await res.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = objectUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
   }
 
-  const handleDownloadPdf = (): void => {
+  const handleDownloadZip = async (): Promise<void> => {
+    const url = `/api/manuscript/${projectId}/export?module=${module}&include_pdf=true`
+    try {
+      await downloadBlob(url, `${projectId}-${module}.zip`)
+    } catch (err) {
+      message.error(`Download failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+  }
+
+  const handleDownloadPdf = async (): Promise<void> => {
     if (!pdfEntry) {
       message.warning('No PDF yet — compile first')
       return
     }
     const url = `/api/manuscript/${projectId}/pdf/main.pdf?module=${module}&download=1`
-    window.open(url, '_blank')
+    try {
+      await downloadBlob(url, `${projectId}-${module}.pdf`)
+    } catch (err) {
+      message.error(`Download failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
   }
 
   const handlePreviewPdf = (): void => {
     if (!pdfEntry) return
-    const url = `/api/manuscript/${projectId}/pdf/main.pdf?module=${module}`
+    const url = `${window.location.origin}/api/manuscript/${projectId}/pdf/main.pdf?module=${module}`
     window.open(url, '_blank')
+  }
+
+  const handleCleanAux = async (): Promise<void> => {
+    try {
+      const result = await api.delete<{ count: number; removed: string[] }>(
+        `/api/manuscript/${projectId}/aux?module=${module}`,
+      )
+      if (result.count === 0) {
+        message.info('No build artifacts to clean')
+      } else {
+        message.success(`Removed ${result.count} file${result.count === 1 ? '' : 's'}`)
+      }
+      await refreshTree()
+    } catch (err) {
+      message.error(`Clean failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
   }
 
   return (
@@ -231,7 +273,7 @@ export default function SubmitPanel({ projectId, projectName }: SubmitPanelProps
 
           <Button
             disabled={!texEntry}
-            onClick={handleDownloadZip}
+            onClick={() => void handleDownloadZip()}
             icon={<FileArchive size={14} />}
             style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
           >
@@ -240,11 +282,19 @@ export default function SubmitPanel({ projectId, projectName }: SubmitPanelProps
 
           <Button
             disabled={!pdfEntry}
-            onClick={handleDownloadPdf}
+            onClick={() => void handleDownloadPdf()}
             icon={<Download size={14} />}
             style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
           >
             Download PDF
+          </Button>
+
+          <Button
+            onClick={() => void handleCleanAux()}
+            icon={<Trash2 size={14} />}
+            style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            Clean build artifacts
           </Button>
         </div>
       </div>
@@ -294,8 +344,9 @@ export default function SubmitPanel({ projectId, projectName }: SubmitPanelProps
       <div style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
         <strong style={{ color: 'var(--text-secondary)' }}>Tips</strong>
         <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
-          <li>The .zip excludes session files, agent prompts, and LaTeX aux files (<code>.aux</code>, <code>.log</code>, etc.).</li>
-          <li>The compiled <code>main.pdf</code> is included in the zip by default.</li>
+          <li>The .zip bundles every source the paper needs — <code>.tex</code>, <code>.bib</code>, <code>.cls</code>/<code>.sty</code>, figures, and subfolders referenced by <code>\input</code> / <code>\includegraphics</code> / <code>\bibliography</code>.</li>
+          <li>Session files, agent prompts (<code>SOUL.md</code> etc.), and LaTeX aux files (<code>.aux</code>, <code>.log</code>, <code>.bbl</code>, <code>.synctex.gz</code>, …) are excluded automatically.</li>
+          <li>The compiled <code>main.pdf</code> is included by default. Aux files are also hidden from the file tree — use <strong>Clean build artifacts</strong> to delete them from disk.</li>
           <li>If compilation fails, install TeX Live (or BasicTeX on macOS) and ensure <code>pdflatex</code> is on your PATH.</li>
         </ul>
       </div>

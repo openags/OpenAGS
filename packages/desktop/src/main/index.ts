@@ -131,7 +131,9 @@ async function main(): Promise<void> {
       mainWindow.on('ready-to-show', () => mainWindow.show())
 
       mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        if (url.startsWith('https://')) shell.openExternal(url)
+        if (url.startsWith('https://') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
+          shell.openExternal(url)
+        }
         return { action: 'deny' }
       })
 

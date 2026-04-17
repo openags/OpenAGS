@@ -28,12 +28,34 @@ interface FileEntry {
   children: FileEntry[]
 }
 
+// Files/dirs hidden from both the file tree AND the zip export.
+const SKIP_FILES = new Set(['SOUL.md', 'STATUS.md', 'TASKS.md', 'memory.md'])
+const SKIP_DIRS = new Set(['sessions', 'skills', '.openags'])
+const AUX_EXTENSIONS = new Set([
+  '.aux', '.log', '.out', '.toc', '.bbl', '.blg',
+  '.fdb_latexmk', '.fls', '.lof', '.lot', '.idx', '.ind', '.ilg', '.nav', '.snm',
+])
+
+function isAuxFile(name: string): boolean {
+  const lower = name.toLowerCase()
+  if (lower.endsWith('.synctex.gz')) return true
+  return AUX_EXTENSIONS.has(path.extname(lower))
+}
+
+function shouldSkipFile(name: string): boolean {
+  return SKIP_FILES.has(name) || isAuxFile(name)
+}
+
+function shouldSkipDir(name: string): boolean {
+  return SKIP_DIRS.has(name) || name.startsWith('.')
+}
+
 function buildTree(dir: string, relativeTo: string): FileEntry[] {
   if (!fs.existsSync(dir)) return []
   const entries: FileEntry[] = []
 
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith('.') || entry.name === 'sessions' || entry.name === 'skills') continue
+    if (entry.isDirectory() ? shouldSkipDir(entry.name) : shouldSkipFile(entry.name)) continue
     const fullPath = path.join(dir, entry.name)
     const relPath = path.relative(relativeTo, fullPath)
 
@@ -64,6 +86,27 @@ function buildTree(dir: string, relativeTo: string): FileEntry[] {
   })
 
   return entries
+}
+
+function cleanAuxFiles(dir: string): { removed: string[] } {
+  const removed: string[] = []
+  if (!fs.existsSync(dir)) return { removed }
+  const walk = (current: string): void => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name)
+      if (entry.isDirectory()) {
+        if (shouldSkipDir(entry.name)) continue
+        walk(full)
+      } else if (isAuxFile(entry.name)) {
+        try {
+          fs.unlinkSync(full)
+          removed.push(path.relative(dir, full))
+        } catch { /* ignore */ }
+      }
+    }
+  }
+  walk(dir)
+  return { removed }
 }
 
 export function createManuscriptRoutes(workspaceDir?: string): Router {
@@ -285,22 +328,6 @@ export function createManuscriptRoutes(workspaceDir?: string): Router {
     const dir = resolveModuleDir(param(req.params.projectId), module)
     if (!dir) { res.status(404).json({ error: 'Module not found' }); return }
 
-    // Patterns to skip — LaTeX aux files + agent internals
-    const SKIP_FILES = new Set([
-      'SOUL.md', 'STATUS.md', 'TASKS.md', 'memory.md',
-    ])
-    const SKIP_DIRS = new Set(['sessions', 'skills', '.openags'])
-    const AUX_EXTENSIONS = new Set([
-      '.aux', '.log', '.out', '.toc', '.bbl', '.blg', '.synctex.gz',
-      '.fdb_latexmk', '.fls', '.lof', '.lot', '.idx', '.ind', '.ilg', '.nav', '.snm',
-    ])
-    const isAuxFile = (name: string): boolean => {
-      const lower = name.toLowerCase()
-      if (lower.endsWith('.synctex.gz')) return true
-      const ext = path.extname(lower)
-      return AUX_EXTENSIONS.has(ext)
-    }
-
     const fileName = `${param(req.params.projectId)}-${module}.zip`
     res.setHeader('Content-Type', 'application/zip')
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
@@ -318,11 +345,10 @@ export function createManuscriptRoutes(workspaceDir?: string): Router {
       for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
         const name = entry.name
         if (entry.isDirectory()) {
-          if (SKIP_DIRS.has(name) || name.startsWith('.')) continue
+          if (shouldSkipDir(name)) continue
           walk(path.join(currentDir, name), path.join(archivePrefix, name))
         } else {
-          if (SKIP_FILES.has(name)) continue
-          if (isAuxFile(name)) continue
+          if (shouldSkipFile(name)) continue
           if (!includePdf && name.toLowerCase().endsWith('.pdf')) continue
           archive.file(path.join(currentDir, name), { name: path.join(archivePrefix, name) })
         }
@@ -331,6 +357,19 @@ export function createManuscriptRoutes(workspaceDir?: string): Router {
 
     walk(dir, module)
     void archive.finalize()
+  })
+
+  // Delete LaTeX build artifacts (aux files) — tree-wide, keeps sources and PDF.
+  router.delete('/manuscript/:projectId/aux', (req: Request, res: Response) => {
+    const module = (req.query.module as string) || 'manuscript'
+    const dir = resolveModuleDir(param(req.params.projectId), module)
+    if (!dir) { res.status(404).json({ error: 'Module not found' }); return }
+    try {
+      const result = cleanAuxFiles(dir)
+      res.json({ success: true, removed: result.removed, count: result.removed.length })
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Clean failed' })
+    }
   })
 
   // SyncTeX: PDF position → LaTeX source position
